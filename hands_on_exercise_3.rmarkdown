@@ -531,3 +531,4 @@ globalPop %>%
 ## Learning Reflection
 
 In this section, I learned how animation can be used to show changes over time. `gganimate` creates GIF-style animations from ggplot objects, while `plotly` creates interactive animated charts with play buttons and sliders.
+
