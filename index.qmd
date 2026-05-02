@@ -1,11 +1,21 @@
 ---
 title: "ISSS608-VAA"
+format:
+  html:
+    toc: false
 ---
 
-This is a Quarto website.
+# ISSS608-VAA
 
-To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+Hi, I’m **Jedidiah Asaf Tallulembang**\
+This website contains my hands-on exercises for **ISSS608 Visual Analytics and Applications**.
 
-```{r}
-1 + 1
-```
+## Hands-on Exercises
+
+::: card
+### Hands-on Exercise 3
+
+Programming Interactive Data Visualisation with R
+
+[Open Exercise](hands_on_exercise_3.qmd){.btn .btn-primary}
+:::
