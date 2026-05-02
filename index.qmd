@@ -7,15 +7,23 @@ format:
 
 # ISSS608-VAA
 
-Hi, I’m **Jedidiah Asaf Tallulembang**\
+Hi, I’m **Jedidiah Asaf T**.\
 This website contains my hands-on exercises for **ISSS608 Visual Analytics and Applications**.
 
 ## Hands-on Exercises
 
 ::: card
-### Hands-on Exercise 3
+### Hands-on Exercise 3a
 
 Programming Interactive Data Visualisation with R
 
-[Open Exercise](hands_on_exercise_3.qmd){.btn .btn-primary}
+[Open Exercise](hands_on_exercise_3a.qmd){.btn .btn-primary}
+:::
+
+::: card
+### Hands-on Exercise 3b
+
+Programming Animated Statistical Graphics with R
+
+[Open Exercise](hands_on_exercise_3b.qmd){.btn .btn-primary}
 :::

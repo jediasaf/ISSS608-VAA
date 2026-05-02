@@ -7,8 +7,14 @@ website:
     left:
       - href: index.qmd
         text: Home
-      - href: hands_on_exercise_3.qmd
-        text: Hands-on Exercise 3
+
+      - text: "Hands-on Exercises"
+        menu:
+          - text: "Hands-on Exercise 3a: Programming Interactive Data Visualisation with R"
+            href: "hands_on_exercise_3a.html"
+          - text: "Hands-on Exercise 3b: Programming Animated Statistical Graphics with R"
+            href: "hands_on_exercise_3b.html"
+
       - href: about.qmd
         text: About
 
