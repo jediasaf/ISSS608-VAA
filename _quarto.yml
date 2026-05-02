@@ -7,7 +7,10 @@ website:
     left:
       - href: index.qmd
         text: Home
-      - about.qmd
+      - href: hands_on_exercise_3.qmd
+        text: Hands-on Exercise 3
+      - href: about.qmd
+        text: About
 
 format:
   html:
@@ -18,4 +21,3 @@ format:
     toc: true
 
 editor: visual
-
