@@ -1,0 +1,244 @@
+---
+title: "Hands-on Exercise 4d"
+subtitle: "Funnel Plots for Fair Comparisons"
+author: "Jedidiah Asaf T"
+format:
+  html:
+    toc: true
+    code-fold: true
+---
+
+## Overview
+
+This hands-on exercise focuses on using funnel plots to make fair comparisons across groups. The example uses cumulative COVID-19 cases and deaths by sub-district in DKI Jakarta.
+
+## Setup
+
+```{r}
+#| message: false
+#| warning: false
+
+if (!require(pacman)) install.packages("pacman")
+
+pacman::p_load(
+  tidyverse,
+  FunnelPlotR,
+  plotly,
+  knitr
+)
+
+covid19 <- read_csv("COVID-19_DKI_Jakarta.csv") %>%
+  mutate_if(is.character, as.factor)
+```
+
+## Data Preview
+
+```{r}
+glimpse(covid19)
+```
+
+```{r}
+knitr::kable(
+  head(covid19),
+  format = "html"
+)
+```
+
+# 1. FunnelPlotR Method
+
+## 1.1 Basic Funnel Plot
+
+```{r}
+funnel_plot(
+  .data = covid19,
+  numerator = Positive,
+  denominator = Death,
+  group = `Sub-district`
+)
+```
+
+## 1.2 Funnel Plot Using Proportion Rate
+
+```{r}
+funnel_plot(
+  .data = covid19,
+  numerator = Death,
+  denominator = Positive,
+  group = `Sub-district`,
+  data_type = "PR",
+  xrange = c(0, 6500),
+  yrange = c(0, 0.05)
+)
+```
+
+## 1.3 Funnel Plot with Custom Labels
+
+```{r}
+funnel_plot(
+  .data = covid19,
+  numerator = Death,
+  denominator = Positive,
+  group = `Sub-district`,
+  data_type = "PR",
+  xrange = c(0, 6500),
+  yrange = c(0, 0.05),
+  label = NA,
+  title = "Cumulative COVID-19 Fatality Rate by Cumulative Total Number of COVID-19 Positive Cases",
+  x_label = "Cumulative COVID-19 Positive Cases",
+  y_label = "Cumulative Fatality Rate"
+)
+```
+
+# 2. Manual Funnel Plot with ggplot2
+
+## 2.1 Computing Derived Fields
+
+```{r}
+df <- covid19 %>%
+  mutate(
+    rate = Death / Positive,
+    rate.se = sqrt((rate * (1 - rate)) / Positive)
+  ) %>%
+  filter(
+    rate > 0,
+    Positive > 0,
+    !is.na(rate),
+    !is.na(rate.se)
+  )
+
+fit.mean <- weighted.mean(df$rate, 1 / df$rate.se^2)
+
+knitr::kable(
+  head(df),
+  format = "html",
+  digits = 4
+)
+```
+
+## 2.2 Calculating Confidence Limits
+
+```{r}
+number.seq <- seq(1, max(df$Positive), 1)
+
+number.ll95 <- fit.mean - 1.96 * sqrt((fit.mean * (1 - fit.mean)) / number.seq)
+number.ul95 <- fit.mean + 1.96 * sqrt((fit.mean * (1 - fit.mean)) / number.seq)
+
+number.ll999 <- fit.mean - 3.29 * sqrt((fit.mean * (1 - fit.mean)) / number.seq)
+number.ul999 <- fit.mean + 3.29 * sqrt((fit.mean * (1 - fit.mean)) / number.seq)
+
+dfCI <- data.frame(
+  number.seq = number.seq,
+  number.ll95 = pmax(0, number.ll95),
+  number.ul95 = number.ul95,
+  number.ll999 = pmax(0, number.ll999),
+  number.ul999 = number.ul999,
+  fit.mean = fit.mean
+)
+
+knitr::kable(
+  head(dfCI),
+  format = "html",
+  digits = 4
+)
+```
+
+## 2.3 Static Funnel Plot
+
+```{r}
+p <- ggplot(
+  df,
+  aes(
+    x = Positive,
+    y = rate
+  )
+) +
+  geom_point(
+    aes(
+      label = `Sub-district`,
+      text = paste(
+        "Sub-district:", `Sub-district`,
+        "<br>City:", City,
+        "<br>District:", District,
+        "<br>Positive cases:", Positive,
+        "<br>Deaths:", Death,
+        "<br>Fatality rate:", round(rate, 4)
+      )
+    ),
+    alpha = 0.4
+  ) +
+  geom_line(
+    data = dfCI,
+    aes(
+      x = number.seq,
+      y = number.ll95
+    ),
+    linewidth = 0.4,
+    colour = "grey40",
+    linetype = "dashed"
+  ) +
+  geom_line(
+    data = dfCI,
+    aes(
+      x = number.seq,
+      y = number.ul95
+    ),
+    linewidth = 0.4,
+    colour = "grey40",
+    linetype = "dashed"
+  ) +
+  geom_line(
+    data = dfCI,
+    aes(
+      x = number.seq,
+      y = number.ll999
+    ),
+    linewidth = 0.4,
+    colour = "grey40"
+  ) +
+  geom_line(
+    data = dfCI,
+    aes(
+      x = number.seq,
+      y = number.ul999
+    ),
+    linewidth = 0.4,
+    colour = "grey40"
+  ) +
+  geom_hline(
+    data = dfCI,
+    aes(yintercept = fit.mean),
+    linewidth = 0.4,
+    colour = "grey40"
+  ) +
+  coord_cartesian(
+    ylim = c(0, 0.05)
+  ) +
+  ggtitle("Cumulative Fatality Rate by Cumulative Number of COVID-19 Cases") +
+  xlab("Cumulative Number of COVID-19 Positive Cases") +
+  ylab("Cumulative Fatality Rate") +
+  theme_light() +
+  theme(
+    plot.title = element_text(size = 12)
+  )
+
+p
+```
+
+## 2.4 Interactive Funnel Plot
+
+```{r}
+fp_ggplotly <- ggplotly(
+  p,
+  tooltip = c("text", "x", "y")
+)
+
+fp_ggplotly
+```
+
+# 3. Interpretation
+
+A funnel plot helps compare groups more fairly because it accounts for different sample sizes. Groups with smaller denominators naturally show more variation, while groups with larger denominators are expected to cluster closer to the overall mean.
+
+## Learning Reflection
+
+In this exercise, I learned that funnel plots are useful when comparing rates across groups with different sample sizes. They help reduce misleading conclusions by showing expected statistical variation around the overall average.

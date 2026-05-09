@@ -1,0 +1,154 @@
+---
+title: "Hands-on Exercise 4b"
+subtitle: "Visual Statistical Analysis"
+author: "Jedidiah Asaf T"
+format:
+  html:
+    toc: true
+    code-fold: true
+---
+
+## Overview
+
+This hands-on exercise focuses on visual statistical analysis using the `ggstatsplot` package.
+
+## Setup
+
+```{r}
+#| message: false
+#| warning: false
+
+if (!require(pacman)) install.packages("pacman")
+
+pacman::p_load(
+  ggstatsplot,
+  tidyverse
+)
+
+exam <- read_csv("Exam_data.csv")
+```
+
+## Data Preview
+
+```{r}
+glimpse(exam)
+```
+
+# 1. One-sample Test
+
+## 1.1 One-sample Test for English Scores
+
+```{r}
+set.seed(1234)
+
+gghistostats(
+  data = exam,
+  x = ENGLISH,
+  type = "bayes",
+  test.value = 60,
+  xlab = "English scores"
+)
+```
+
+# 2. Two-sample Mean Test
+
+## 2.1 Maths Scores by Gender
+
+```{r}
+ggbetweenstats(
+  data = exam,
+  x = GENDER,
+  y = MATHS,
+  type = "np",
+  messages = FALSE
+)
+```
+
+# 3. One-way ANOVA Test
+
+## 3.1 English Scores by Race
+
+```{r}
+ggbetweenstats(
+  data = exam,
+  x = RACE,
+  y = ENGLISH,
+  type = "p",
+  mean.ci = TRUE,
+  pairwise.comparisons = TRUE,
+  pairwise.display = "s",
+  p.adjust.method = "fdr",
+  messages = FALSE
+)
+```
+
+# 4. Correlation Test
+
+## 4.1 Maths Scores vs English Scores
+
+```{r}
+ggscatterstats(
+  data = exam,
+  x = MATHS,
+  y = ENGLISH,
+  marginal = FALSE
+)
+```
+
+# 5. Association Test
+
+## 5.1 Binning Maths Scores
+
+```{r}
+exam1 <- exam %>%
+  mutate(
+    MATHS_bins = cut(
+      MATHS,
+      breaks = c(0, 60, 75, 85, 100),
+      include.lowest = TRUE,
+      labels = c("0-60", "61-75", "76-85", "86-100")
+    )
+  )
+
+exam1 %>%
+  count(MATHS_bins, GENDER)
+```
+
+## 5.2 Association Between Maths Score Bands and Gender
+
+```{r}
+ggbarstats(
+  data = exam1,
+  x = MATHS_bins,
+  y = GENDER
+)
+```
+
+# 6. Additional Exploration
+
+## 6.1 Science Scores by Gender
+
+```{r}
+ggbetweenstats(
+  data = exam,
+  x = GENDER,
+  y = SCIENCE,
+  type = "np",
+  messages = FALSE
+)
+```
+
+## 6.2 Science Scores vs Maths Scores
+
+```{r}
+ggscatterstats(
+  data = exam,
+  x = SCIENCE,
+  y = MATHS,
+  marginal = FALSE
+)
+```
+
+## Learning Reflection
+
+In this exercise, I learned that `ggstatsplot` is useful because it combines statistical test results with visualisation. Instead of only showing the chart, it also displays useful statistical information such as test statistics, p-values, confidence intervals, and sample sizes.

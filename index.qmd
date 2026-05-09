@@ -27,3 +27,35 @@ Programming Animated Statistical Graphics with R
 
 [Open Exercise](hands_on_exercise_3b.qmd){.btn .btn-primary}
 :::
+
+::: card
+### Hands-on Exercise 4a
+
+Visualising Distribution
+
+[Open Exercise](hands_on_exercise_4a.qmd){.btn .btn-primary}
+:::
+
+::: card
+### Hands-on Exercise 4b
+
+Visual Statistical Analysis
+
+[Open Exercise](hands_on_exercise_4b.qmd){.btn .btn-primary}
+:::
+
+::: card
+### Hands-on Exercise 4c
+
+Visualising Uncertainty
+
+[Open Exercise](hands_on_exercise_4c.qmd){.btn .btn-primary}
+:::
+
+::: card
+### Hands-on Exercise 4d
+
+Funnel Plots for Fair Comparisons
+
+[Open Exercise](hands_on_exercise_4d.qmd){.btn .btn-primary}
+:::

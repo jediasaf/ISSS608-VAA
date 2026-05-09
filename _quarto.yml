@@ -11,9 +11,17 @@ website:
       - text: "Hands-on Exercises"
         menu:
           - text: "Hands-on Exercise 3a: Programming Interactive Data Visualisation with R"
-            href: "hands_on_exercise_3a.html"
+            href: hands_on_exercise_3a.qmd
           - text: "Hands-on Exercise 3b: Programming Animated Statistical Graphics with R"
-            href: "hands_on_exercise_3b.html"
+            href: hands_on_exercise_3b.qmd
+          - text: "Hands-on Exercise 4a: Visualising Distribution"
+            href: hands_on_exercise_4a.qmd
+          - text: "Hands-on Exercise 4b: Visual Statistical Analysis"
+            href: hands_on_exercise_4b.qmd
+          - text: "Hands-on Exercise 4c: Visualising Uncertainty"
+            href: hands_on_exercise_4c.qmd
+          - text: "Hands-on Exercise 4d: Funnel Plots for Fair Comparisons"
+            href: hands_on_exercise_4d.qmd
 
       - href: about.qmd
         text: About

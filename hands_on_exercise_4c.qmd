@@ -1,0 +1,332 @@
+---
+title: "Hands-on Exercise 4c"
+subtitle: "Visualising Uncertainty"
+author: "Jedidiah Asaf T"
+format:
+  html:
+    toc: true
+    code-fold: true
+---
+
+## Overview
+
+This hands-on exercise focuses on visualising uncertainty using error bars, confidence intervals, interactive charts, and uncertainty visualisation methods.
+
+## Setup
+
+```{r}
+#| message: false
+#| warning: false
+
+if (!require(pacman)) install.packages("pacman")
+
+pacman::p_load(
+  plotly,
+  crosstalk,
+  DT,
+  ggdist,
+  ggridges,
+  colorspace,
+  gganimate,
+  tidyverse,
+  knitr
+)
+
+exam <- read_csv("Exam_data.csv")
+```
+
+## Data Preview
+
+```{r}
+glimpse(exam)
+```
+
+# 1. Summary Statistics
+
+```{r}
+my_sum <- exam %>%
+  group_by(RACE) %>%
+  summarise(
+    n = n(),
+    mean = mean(MATHS, na.rm = TRUE),
+    sd = sd(MATHS, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    se = sd / sqrt(n - 1)
+  )
+
+knitr::kable(my_sum, format = "html", digits = 2)
+```
+
+# 2. Visualising Uncertainty with Error Bars
+
+## 2.1 Standard Error Bars
+
+```{r}
+ggplot(my_sum) +
+  geom_errorbar(
+    aes(
+      x = RACE,
+      ymin = mean - se,
+      ymax = mean + se
+    ),
+    width = 0.2,
+    colour = "black",
+    alpha = 0.9,
+    linewidth = 0.5
+  ) +
+  geom_point(
+    aes(
+      x = RACE,
+      y = mean
+    ),
+    stat = "identity",
+    color = "red",
+    size = 1.5,
+    alpha = 1
+  ) +
+  labs(
+    title = "Standard Error of Mean Maths Score by Race",
+    x = "Race",
+    y = "Mean Maths score"
+  ) +
+  theme_minimal()
+```
+
+## 2.2 95% Confidence Interval
+
+```{r}
+ggplot(my_sum) +
+  geom_errorbar(
+    aes(
+      x = reorder(RACE, -mean),
+      ymin = mean - 1.96 * se,
+      ymax = mean + 1.96 * se
+    ),
+    width = 0.2,
+    colour = "black",
+    alpha = 0.9,
+    linewidth = 0.5
+  ) +
+  geom_point(
+    aes(
+      x = reorder(RACE, -mean),
+      y = mean
+    ),
+    stat = "identity",
+    color = "red",
+    size = 1.5,
+    alpha = 1
+  ) +
+  labs(
+    title = "95% Confidence Interval of Mean Maths Score by Race",
+    x = "Race",
+    y = "Mean Maths score"
+  ) +
+  theme_minimal()
+```
+
+# 3. Interactive Error Bars
+
+## 3.1 99% Confidence Interval with Linked Table
+
+```{r}
+shared_df <- SharedData$new(my_sum)
+
+p <- ggplot(shared_df) +
+  geom_errorbar(
+    aes(
+      x = reorder(RACE, -mean),
+      ymin = mean - 2.58 * se,
+      ymax = mean + 2.58 * se
+    ),
+    width = 0.2,
+    colour = "black",
+    alpha = 0.9,
+    linewidth = 0.5
+  ) +
+  geom_point(
+    aes(
+      x = RACE,
+      y = mean,
+      text = paste(
+        "Race:", RACE,
+        "<br>N:", n,
+        "<br>Average score:", round(mean, 2),
+        "<br>99% CI: [",
+        round(mean - 2.58 * se, 2),
+        ",",
+        round(mean + 2.58 * se, 2),
+        "]"
+      )
+    ),
+    stat = "identity",
+    color = "red",
+    size = 1.5,
+    alpha = 1
+  ) +
+  xlab("Race") +
+  ylab("Average Maths Score") +
+  ggtitle("99% Confidence Interval of Average Maths Scores by Race") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      vjust = 0.5,
+      hjust = 1
+    )
+  )
+
+bscols(
+  widths = c(6, 6),
+  ggplotly(p, tooltip = "text"),
+  DT::datatable(
+    shared_df,
+    rownames = FALSE,
+    class = "compact",
+    width = "100%",
+    options = list(
+      pageLength = 10,
+      scrollX = TRUE
+    )
+  ) %>%
+    formatRound(
+      columns = c("mean", "sd", "se"),
+      digits = 2
+    )
+)
+```
+
+# 4. Visualising Uncertainty with ggdist
+
+## 4.1 Mean Point Interval Plot
+
+```{r}
+exam %>%
+  ggplot(
+    aes(
+      x = RACE,
+      y = MATHS
+    )
+  ) +
+  stat_pointinterval() +
+  labs(
+    title = "Visualising Confidence Intervals of Mean Maths Score",
+    subtitle = "Mean point + multiple interval plot",
+    x = "Race",
+    y = "Maths score"
+  ) +
+  theme_minimal()
+```
+
+## 4.2 Median Point Interval Plot
+
+```{r}
+exam %>%
+  ggplot(
+    aes(
+      x = RACE,
+      y = MATHS
+    )
+  ) +
+  stat_pointinterval(
+    .width = 0.95,
+    .point = median,
+    .interval = qi
+  ) +
+  labs(
+    title = "Visualising Confidence Intervals of Median Maths Score",
+    subtitle = "Median point + interval plot",
+    x = "Race",
+    y = "Maths score"
+  ) +
+  theme_minimal()
+```
+
+## 4.3 Multiple Interval Plot
+
+```{r}
+exam %>%
+  ggplot(
+    aes(
+      x = RACE,
+      y = MATHS
+    )
+  ) +
+  stat_pointinterval(
+    .width = c(0.95, 0.99),
+    show.legend = TRUE
+  ) +
+  labs(
+    title = "Visualising 95% and 99% Intervals of Mean Maths Score",
+    subtitle = "Mean point + multiple interval plot",
+    x = "Race",
+    y = "Maths score"
+  ) +
+  theme_minimal()
+```
+
+## 4.4 Gradient Interval Plot
+
+```{r}
+exam %>%
+  ggplot(
+    aes(
+      x = RACE,
+      y = MATHS
+    )
+  ) +
+  stat_gradientinterval(
+    fill = "skyblue",
+    show.legend = TRUE
+  ) +
+  labs(
+    title = "Visualising Confidence Intervals of Mean Maths Score",
+    subtitle = "Gradient + interval plot",
+    x = "Race",
+    y = "Maths score"
+  ) +
+  theme_minimal()
+```
+
+# 5. Optional: Hypothetical Outcome Plot
+
+This section is optional because the `ungeviz` package may need to be installed from GitHub. To avoid rendering errors, the code is shown but not executed.
+
+```{r}
+#| eval: false
+
+# install.packages("devtools")
+# devtools::install_github("wilkelab/ungeviz")
+
+library(ungeviz)
+
+ggplot(
+  data = exam,
+  aes(
+    x = factor(RACE),
+    y = MATHS
+  )
+) +
+  geom_point(
+    position = position_jitter(
+      height = 0.3,
+      width = 0.05
+    ),
+    size = 0.4,
+    color = "#0072B2",
+    alpha = 1 / 2
+  ) +
+  geom_hpline(
+    data = sampler(25, group = RACE),
+    height = 0.6,
+    color = "#D55E00"
+  ) +
+  theme_bw() +
+  transition_states(.draw, 1, 3)
+```
+
+## Learning Reflection
+
+In this exercise, I learned that uncertainty should not be hidden in visual analytics. Error bars, confidence intervals, and interval plots help communicate how reliable or uncertain a point estimate is. Interactive visualisation also helps users inspect the uncertainty values more clearly.
