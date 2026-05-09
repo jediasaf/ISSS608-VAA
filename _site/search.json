@@ -1,185 +1,276 @@
 [
   {
-    "objectID": "about.html",
-    "href": "about.html",
-    "title": "About",
-    "section": "",
-    "text": "About this site\n\n1 + 1\n\n[1] 2"
-  },
-  {
-    "objectID": "hands_on_exercise_3.html",
-    "href": "hands_on_exercise_3.html",
-    "title": "Hands-on Exercise 3",
-    "section": "",
-    "text": "This hands-on exercise recreates the key interactive visualisation techniques from Chapter 3 of R for Visual Analytics. The focus is on using ggiraph, plotly, DT, and crosstalk to make static R graphics interactive."
-  },
-  {
-    "objectID": "hands_on_exercise_3.html#overview",
-    "href": "hands_on_exercise_3.html#overview",
-    "title": "Hands-on Exercise 3",
-    "section": "",
-    "text": "This hands-on exercise recreates the key interactive visualisation techniques from Chapter 3 of R for Visual Analytics. The focus is on using ggiraph, plotly, DT, and crosstalk to make static R graphics interactive."
-  },
-  {
-    "objectID": "hands_on_exercise_3.html#setup",
-    "href": "hands_on_exercise_3.html#setup",
-    "title": "Hands-on Exercise 3",
-    "section": "Setup",
-    "text": "Setup\n\n\nCode\nif (!require(pacman)) install.packages(\"pacman\")\n\npacman::p_load(\n  ggiraph,\n  plotly,\n  patchwork,\n  DT,\n  tidyverse,\n  crosstalk\n)\n\nexam_data &lt;- read_csv(\"Exam_data.csv\")"
-  },
-  {
-    "objectID": "hands_on_exercise_3.html#data-preview",
-    "href": "hands_on_exercise_3.html#data-preview",
-    "title": "Hands-on Exercise 3",
-    "section": "Data Preview",
-    "text": "Data Preview\n\n\nCode\nDT::datatable(\n  exam_data,\n  class = \"compact\",\n  options = list(\n    pageLength = 10,\n    scrollX = TRUE\n  )\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3.html#tooltip-showing-student-id",
-    "href": "hands_on_exercise_3.html#tooltip-showing-student-id",
-    "title": "Hands-on Exercise 3",
-    "section": "1.1 Tooltip Showing Student ID",
-    "text": "1.1 Tooltip Showing Student ID\n\n\nCode\np &lt;- ggplot(exam_data, aes(x = MATHS)) +\n  geom_dotplot_interactive(\n    aes(tooltip = ID),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"Distribution of Maths Scores\",\n    x = \"Maths Score\"\n  )\n\ngirafe(\n  ggobj = p,\n  width_svg = 7,\n  height_svg = 4\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3.html#tooltip-showing-multiple-information",
-    "href": "hands_on_exercise_3.html#tooltip-showing-multiple-information",
-    "title": "Hands-on Exercise 3",
-    "section": "1.2 Tooltip Showing Multiple Information",
-    "text": "1.2 Tooltip Showing Multiple Information\n\n\nCode\nexam_data &lt;- exam_data %&gt;%\n  mutate(\n    tooltip_text = paste0(\n      \"ID: \", ID,\n      \"\\nClass: \", CLASS,\n      \"\\nGender: \", GENDER,\n      \"\\nRace: \", RACE,\n      \"\\nMaths: \", MATHS\n    )\n  )\n\np &lt;- ggplot(exam_data, aes(x = MATHS)) +\n  geom_dotplot_interactive(\n    aes(tooltip = tooltip_text),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"Maths Score Distribution with Detailed Tooltip\",\n    x = \"Maths Score\"\n  )\n\ngirafe(\n  ggobj = p,\n  width_svg = 8,\n  height_svg = 4\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3.html#custom-tooltip-style",
-    "href": "hands_on_exercise_3.html#custom-tooltip-style",
-    "title": "Hands-on Exercise 3",
-    "section": "1.3 Custom Tooltip Style",
-    "text": "1.3 Custom Tooltip Style\n\n\nCode\ntooltip_css &lt;- \"\n  background-color: white;\n  color: black;\n  font-weight: bold;\n  padding: 6px;\n  border-radius: 4px;\n  border: 1px solid #333333;\n\"\n\np &lt;- ggplot(exam_data, aes(x = MATHS)) +\n  geom_dotplot_interactive(\n    aes(tooltip = tooltip_text),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"Custom Tooltip Style\",\n    x = \"Maths Score\"\n  )\n\ngirafe(\n  ggobj = p,\n  width_svg = 8,\n  height_svg = 4,\n  options = list(\n    opts_tooltip(css = tooltip_css)\n  )\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3.html#hover-effect-by-class",
-    "href": "hands_on_exercise_3.html#hover-effect-by-class",
-    "title": "Hands-on Exercise 3",
-    "section": "1.4 Hover Effect by Class",
-    "text": "1.4 Hover Effect by Class\n\n\nCode\np &lt;- ggplot(exam_data, aes(x = MATHS)) +\n  geom_dotplot_interactive(\n    aes(data_id = CLASS),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"Hover Highlight by Class\",\n    x = \"Maths Score\"\n  )\n\ngirafe(\n  ggobj = p,\n  width_svg = 8,\n  height_svg = 4\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3.html#styled-hover-effect",
-    "href": "hands_on_exercise_3.html#styled-hover-effect",
-    "title": "Hands-on Exercise 3",
-    "section": "1.5 Styled Hover Effect",
-    "text": "1.5 Styled Hover Effect\n\n\nCode\np &lt;- ggplot(exam_data, aes(x = MATHS)) +\n  geom_dotplot_interactive(\n    aes(data_id = CLASS),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"Styled Hover Highlight by Class\",\n    x = \"Maths Score\"\n  )\n\ngirafe(\n  ggobj = p,\n  width_svg = 8,\n  height_svg = 4,\n  options = list(\n    opts_hover(css = \"fill: #202020;\"),\n    opts_hover_inv(css = \"opacity:0.2;\")\n  )\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3.html#tooltip-and-hover-combined",
-    "href": "hands_on_exercise_3.html#tooltip-and-hover-combined",
-    "title": "Hands-on Exercise 3",
-    "section": "1.6 Tooltip and Hover Combined",
-    "text": "1.6 Tooltip and Hover Combined\n\n\nCode\np &lt;- ggplot(exam_data, aes(x = MATHS)) +\n  geom_dotplot_interactive(\n    aes(\n      tooltip = tooltip_text,\n      data_id = CLASS\n    ),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"Tooltip and Hover Combined\",\n    x = \"Maths Score\"\n  )\n\ngirafe(\n  ggobj = p,\n  width_svg = 8,\n  height_svg = 4,\n  options = list(\n    opts_tooltip(css = tooltip_css),\n    opts_hover(css = \"fill: #202020;\"),\n    opts_hover_inv(css = \"opacity:0.2;\")\n  )\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3.html#coordinated-multiple-views-with-ggiraph",
-    "href": "hands_on_exercise_3.html#coordinated-multiple-views-with-ggiraph",
-    "title": "Hands-on Exercise 3",
-    "section": "1.7 Coordinated Multiple Views with ggiraph",
-    "text": "1.7 Coordinated Multiple Views with ggiraph\n\n\nCode\np1 &lt;- ggplot(exam_data, aes(x = MATHS)) +\n  geom_dotplot_interactive(\n    aes(data_id = ID, tooltip = tooltip_text),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  coord_cartesian(xlim = c(0, 100)) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"Maths\",\n    x = \"Maths Score\"\n  )\n\np2 &lt;- ggplot(exam_data, aes(x = ENGLISH)) +\n  geom_dotplot_interactive(\n    aes(data_id = ID, tooltip = tooltip_text),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  coord_cartesian(xlim = c(0, 100)) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"English\",\n    x = \"English Score\"\n  )\n\ngirafe(\n  code = print(p1 + p2),\n  width_svg = 9,\n  height_svg = 4,\n  options = list(\n    opts_tooltip(css = tooltip_css),\n    opts_hover(css = \"fill: #202020;\"),\n    opts_hover_inv(css = \"opacity:0.2;\")\n  )\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3.html#basic-interactive-scatter-plot",
-    "href": "hands_on_exercise_3.html#basic-interactive-scatter-plot",
-    "title": "Hands-on Exercise 3",
-    "section": "2.1 Basic Interactive Scatter Plot",
-    "text": "2.1 Basic Interactive Scatter Plot\n\n\nCode\nplot_ly(\n  data = exam_data,\n  x = ~MATHS,\n  y = ~ENGLISH,\n  type = \"scatter\",\n  mode = \"markers\"\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3.html#scatter-plot-coloured-by-race",
-    "href": "hands_on_exercise_3.html#scatter-plot-coloured-by-race",
-    "title": "Hands-on Exercise 3",
-    "section": "2.2 Scatter Plot Coloured by Race",
-    "text": "2.2 Scatter Plot Coloured by Race\n\n\nCode\nplot_ly(\n  data = exam_data,\n  x = ~ENGLISH,\n  y = ~MATHS,\n  color = ~RACE,\n  type = \"scatter\",\n  mode = \"markers\",\n  text = ~paste(\n    \"ID:\", ID,\n    \"&lt;br&gt;Class:\", CLASS,\n    \"&lt;br&gt;Gender:\", GENDER,\n    \"&lt;br&gt;Race:\", RACE,\n    \"&lt;br&gt;English:\", ENGLISH,\n    \"&lt;br&gt;Maths:\", MATHS\n  ),\n  hoverinfo = \"text\"\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3.html#ggplot-converted-to-interactive-plotly",
-    "href": "hands_on_exercise_3.html#ggplot-converted-to-interactive-plotly",
-    "title": "Hands-on Exercise 3",
-    "section": "2.3 ggplot Converted to Interactive Plotly",
-    "text": "2.3 ggplot Converted to Interactive Plotly\n\n\nCode\np &lt;- ggplot(exam_data, aes(x = MATHS, y = ENGLISH)) +\n  geom_point(size = 1) +\n  coord_cartesian(\n    xlim = c(0, 100),\n    ylim = c(0, 100)\n  ) +\n  labs(\n    title = \"English vs Maths\",\n    x = \"Maths Score\",\n    y = \"English Score\"\n  )\n\nggplotly(p)"
-  },
-  {
-    "objectID": "hands_on_exercise_3.html#coordinated-multiple-views-with-plotly",
-    "href": "hands_on_exercise_3.html#coordinated-multiple-views-with-plotly",
-    "title": "Hands-on Exercise 3",
-    "section": "2.4 Coordinated Multiple Views with plotly",
-    "text": "2.4 Coordinated Multiple Views with plotly\n\n\nCode\nd &lt;- highlight_key(exam_data)\n\np1 &lt;- ggplot(d, aes(x = MATHS, y = ENGLISH)) +\n  geom_point(size = 1) +\n  coord_cartesian(\n    xlim = c(0, 100),\n    ylim = c(0, 100)\n  ) +\n  labs(\n    title = \"English vs Maths\",\n    x = \"Maths\",\n    y = \"English\"\n  )\n\np2 &lt;- ggplot(d, aes(x = MATHS, y = SCIENCE)) +\n  geom_point(size = 1) +\n  coord_cartesian(\n    xlim = c(0, 100),\n    ylim = c(0, 100)\n  ) +\n  labs(\n    title = \"Science vs Maths\",\n    x = \"Maths\",\n    y = \"Science\"\n  )\n\nsubplot(\n  ggplotly(p1),\n  ggplotly(p2),\n  titleX = TRUE,\n  titleY = TRUE\n)"
-  },
-  {
     "objectID": "index.html",
     "href": "index.html",
     "title": "ISSS608-VAA",
     "section": "",
-    "text": "Hi, I’m Jedidiah Asaf T.\nThis website contains my hands-on exercises for ISSS608 Visual Analytics and Applications.\n\n\n\n\nProgramming Interactive Data Visualisation with R\nOpen Exercise\n\n\n\nProgramming Animated Statistical Graphics with R\nOpen Exercise"
+    "text": "Hi, I’m Jedidiah Asaf T.\nThis website contains my hands-on exercises for ISSS608 Visual Analytics and Applications.\n\n\n\n\nProgramming Interactive Data Visualisation with R\nOpen Exercise\n\n\n\nProgramming Animated Statistical Graphics with R\nOpen Exercise\n\n\n\nVisualising Distribution\nOpen Exercise\n\n\n\nVisual Statistical Analysis\nOpen Exercise\n\n\n\nVisualising Uncertainty\nOpen Exercise\n\n\n\nFunnel Plots for Fair Comparisons\nOpen Exercise"
   },
   {
     "objectID": "index.html#hands-on-exercises",
     "href": "index.html#hands-on-exercises",
     "title": "ISSS608-VAA",
     "section": "",
-    "text": "Programming Interactive Data Visualisation with R\nOpen Exercise\n\n\n\nProgramming Animated Statistical Graphics with R\nOpen Exercise"
+    "text": "Programming Interactive Data Visualisation with R\nOpen Exercise\n\n\n\nProgramming Animated Statistical Graphics with R\nOpen Exercise\n\n\n\nVisualising Distribution\nOpen Exercise\n\n\n\nVisual Statistical Analysis\nOpen Exercise\n\n\n\nVisualising Uncertainty\nOpen Exercise\n\n\n\nFunnel Plots for Fair Comparisons\nOpen Exercise"
   },
   {
-    "objectID": "hands_on_exercise_3b.html",
-    "href": "hands_on_exercise_3b.html",
-    "title": "Hands-on Exercise 3b",
+    "objectID": "hands_on_exercise_4c.html",
+    "href": "hands_on_exercise_4c.html",
+    "title": "Hands-on Exercise 4c",
     "section": "",
-    "text": "This section extends Hands-on Exercise 3 by creating animated statistical graphics using gganimate and plotly.\n\n\n\n\nCode\npacman::p_load(\n  readxl,\n  gifski,\n  gapminder,\n  plotly,\n  gganimate,\n  tidyverse\n)\n\n\n\n\n\n\n\nCode\nglobalPop &lt;- read_xls(\"GlobalPopulation.xls\", sheet = \"Data\") %&gt;%\n  mutate(\n    across(c(Country, Continent), as.factor),\n    Year = as.integer(Year)\n  )\n\n\n\n\n\n\n\nCode\nggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(alpha = 0.7, show.legend = FALSE) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    title = \"Population Structure\",\n    x = \"% Aged\",\n    y = \"% Young\"\n  )\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nCode\np &lt;- ggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(alpha = 0.7, show.legend = FALSE) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    title = \"Year: {frame_time}\",\n    x = \"% Aged\",\n    y = \"% Young\"\n  ) +\n  transition_time(Year) +\n  ease_aes(\"linear\")\n\nanimate(p, renderer = gifski_renderer())\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nCode\ngg &lt;- ggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(\n    aes(frame = Year),\n    alpha = 0.7\n  ) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    x = \"% Aged\",\n    y = \"% Young\"\n  ) +\n  theme(legend.position = \"none\")\n\n\nWarning in geom_point(aes(frame = Year), alpha = 0.7): Ignoring unknown\naesthetics: frame\n\n\nCode\nggplotly(gg)\n\n\nWarning in p$x$data[firstFrame] &lt;- p$x$frames[[1]]$data: number of items to\nreplace is not a multiple of replacement length\n\n\n\n\n\n\n\n\n\n\n\nCode\nglobalPop %&gt;%\n  plot_ly(\n    x = ~Old,\n    y = ~Young,\n    size = ~Population,\n    color = ~Continent,\n    sizes = c(2, 100),\n    frame = ~Year,\n    text = ~Country,\n    hoverinfo = \"text\",\n    type = \"scatter\",\n    mode = \"markers\"\n  ) %&gt;%\n  layout(showlegend = FALSE)\n\n\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\n\n\n\n\n\n\n\n\n\nIn this section, I learned how animation can be used to show changes over time. gganimate creates GIF-style animations from ggplot objects, while plotly creates interactive animated charts with play buttons and sliders."
+    "text": "This hands-on exercise focuses on visualising uncertainty using error bars, confidence intervals, interactive charts, and uncertainty visualisation methods."
   },
   {
-    "objectID": "hands_on_exercise_3b.html#setup-for-animated-graphics",
-    "href": "hands_on_exercise_3b.html#setup-for-animated-graphics",
-    "title": "Hands-on Exercise 3b",
+    "objectID": "hands_on_exercise_4c.html#overview",
+    "href": "hands_on_exercise_4c.html#overview",
+    "title": "Hands-on Exercise 4c",
     "section": "",
-    "text": "Code\npacman::p_load(\n  readxl,\n  gifski,\n  gapminder,\n  plotly,\n  gganimate,\n  tidyverse\n)"
+    "text": "This hands-on exercise focuses on visualising uncertainty using error bars, confidence intervals, interactive charts, and uncertainty visualisation methods."
   },
   {
-    "objectID": "hands_on_exercise_3b.html#import-global-population-data",
-    "href": "hands_on_exercise_3b.html#import-global-population-data",
-    "title": "Hands-on Exercise 3b",
-    "section": "",
-    "text": "Code\nglobalPop &lt;- read_xls(\"GlobalPopulation.xls\", sheet = \"Data\") %&gt;%\n  mutate(\n    across(c(Country, Continent), as.factor),\n    Year = as.integer(Year)\n  )"
+    "objectID": "hands_on_exercise_4c.html#setup",
+    "href": "hands_on_exercise_4c.html#setup",
+    "title": "Hands-on Exercise 4c",
+    "section": "Setup",
+    "text": "Setup\n\n\nCode\nif (!require(pacman)) install.packages(\"pacman\")\n\npacman::p_load(\n  plotly,\n  crosstalk,\n  DT,\n  ggdist,\n  ggridges,\n  colorspace,\n  gganimate,\n  tidyverse,\n  knitr\n)\n\nexam &lt;- read_csv(\"Exam_data.csv\")"
   },
   {
-    "objectID": "hands_on_exercise_3b.html#static-population-bubble-plot",
-    "href": "hands_on_exercise_3b.html#static-population-bubble-plot",
-    "title": "Hands-on Exercise 3b",
-    "section": "",
-    "text": "Code\nggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(alpha = 0.7, show.legend = FALSE) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    title = \"Population Structure\",\n    x = \"% Aged\",\n    y = \"% Young\"\n  )"
+    "objectID": "hands_on_exercise_4c.html#data-preview",
+    "href": "hands_on_exercise_4c.html#data-preview",
+    "title": "Hands-on Exercise 4c",
+    "section": "Data Preview",
+    "text": "Data Preview\n\n\nCode\nglimpse(exam)\n\n\nRows: 322\nColumns: 7\n$ ID      &lt;chr&gt; \"Student321\", \"Student305\", \"Student289\", \"Student227\", \"Stude…\n$ CLASS   &lt;chr&gt; \"3I\", \"3I\", \"3H\", \"3F\", \"3I\", \"3I\", \"3I\", \"3I\", \"3I\", \"3H\", \"3…\n$ GENDER  &lt;chr&gt; \"Male\", \"Female\", \"Male\", \"Male\", \"Male\", \"Female\", \"Male\", \"M…\n$ RACE    &lt;chr&gt; \"Malay\", \"Malay\", \"Chinese\", \"Chinese\", \"Malay\", \"Malay\", \"Chi…\n$ ENGLISH &lt;dbl&gt; 21, 24, 26, 27, 27, 31, 31, 31, 33, 34, 34, 36, 36, 36, 37, 38…\n$ MATHS   &lt;dbl&gt; 9, 22, 16, 77, 11, 16, 21, 18, 19, 49, 39, 35, 23, 36, 49, 30,…\n$ SCIENCE &lt;dbl&gt; 15, 16, 16, 31, 25, 16, 25, 27, 15, 37, 42, 22, 32, 36, 35, 45…"
   },
   {
-    "objectID": "hands_on_exercise_3b.html#animated-bubble-plot-using-gganimate",
-    "href": "hands_on_exercise_3b.html#animated-bubble-plot-using-gganimate",
-    "title": "Hands-on Exercise 3b",
-    "section": "",
-    "text": "Code\np &lt;- ggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(alpha = 0.7, show.legend = FALSE) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    title = \"Year: {frame_time}\",\n    x = \"% Aged\",\n    y = \"% Young\"\n  ) +\n  transition_time(Year) +\n  ease_aes(\"linear\")\n\nanimate(p, renderer = gifski_renderer())"
+    "objectID": "hands_on_exercise_4c.html#standard-error-bars",
+    "href": "hands_on_exercise_4c.html#standard-error-bars",
+    "title": "Hands-on Exercise 4c",
+    "section": "2.1 Standard Error Bars",
+    "text": "2.1 Standard Error Bars\n\n\nCode\nggplot(my_sum) +\n  geom_errorbar(\n    aes(\n      x = RACE,\n      ymin = mean - se,\n      ymax = mean + se\n    ),\n    width = 0.2,\n    colour = \"black\",\n    alpha = 0.9,\n    linewidth = 0.5\n  ) +\n  geom_point(\n    aes(\n      x = RACE,\n      y = mean\n    ),\n    stat = \"identity\",\n    color = \"red\",\n    size = 1.5,\n    alpha = 1\n  ) +\n  labs(\n    title = \"Standard Error of Mean Maths Score by Race\",\n    x = \"Race\",\n    y = \"Mean Maths score\"\n  ) +\n  theme_minimal()"
   },
   {
-    "objectID": "hands_on_exercise_3b.html#animated-bubble-plot-using-ggplotly",
-    "href": "hands_on_exercise_3b.html#animated-bubble-plot-using-ggplotly",
-    "title": "Hands-on Exercise 3b",
-    "section": "",
-    "text": "Code\ngg &lt;- ggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(\n    aes(frame = Year),\n    alpha = 0.7\n  ) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    x = \"% Aged\",\n    y = \"% Young\"\n  ) +\n  theme(legend.position = \"none\")\n\n\nWarning in geom_point(aes(frame = Year), alpha = 0.7): Ignoring unknown\naesthetics: frame\n\n\nCode\nggplotly(gg)\n\n\nWarning in p$x$data[firstFrame] &lt;- p$x$frames[[1]]$data: number of items to\nreplace is not a multiple of replacement length"
+    "objectID": "hands_on_exercise_4c.html#confidence-interval",
+    "href": "hands_on_exercise_4c.html#confidence-interval",
+    "title": "Hands-on Exercise 4c",
+    "section": "2.2 95% Confidence Interval",
+    "text": "2.2 95% Confidence Interval\n\n\nCode\nggplot(my_sum) +\n  geom_errorbar(\n    aes(\n      x = reorder(RACE, -mean),\n      ymin = mean - 1.96 * se,\n      ymax = mean + 1.96 * se\n    ),\n    width = 0.2,\n    colour = \"black\",\n    alpha = 0.9,\n    linewidth = 0.5\n  ) +\n  geom_point(\n    aes(\n      x = reorder(RACE, -mean),\n      y = mean\n    ),\n    stat = \"identity\",\n    color = \"red\",\n    size = 1.5,\n    alpha = 1\n  ) +\n  labs(\n    title = \"95% Confidence Interval of Mean Maths Score by Race\",\n    x = \"Race\",\n    y = \"Mean Maths score\"\n  ) +\n  theme_minimal()"
   },
   {
-    "objectID": "hands_on_exercise_3b.html#animated-bubble-plot-using-plot_ly",
-    "href": "hands_on_exercise_3b.html#animated-bubble-plot-using-plot_ly",
-    "title": "Hands-on Exercise 3b",
-    "section": "",
-    "text": "Code\nglobalPop %&gt;%\n  plot_ly(\n    x = ~Old,\n    y = ~Young,\n    size = ~Population,\n    color = ~Continent,\n    sizes = c(2, 100),\n    frame = ~Year,\n    text = ~Country,\n    hoverinfo = \"text\",\n    type = \"scatter\",\n    mode = \"markers\"\n  ) %&gt;%\n  layout(showlegend = FALSE)\n\n\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values."
+    "objectID": "hands_on_exercise_4c.html#confidence-interval-with-linked-table",
+    "href": "hands_on_exercise_4c.html#confidence-interval-with-linked-table",
+    "title": "Hands-on Exercise 4c",
+    "section": "3.1 99% Confidence Interval with Linked Table",
+    "text": "3.1 99% Confidence Interval with Linked Table\n\n\nCode\nshared_df &lt;- SharedData$new(my_sum)\n\np &lt;- ggplot(shared_df) +\n  geom_errorbar(\n    aes(\n      x = reorder(RACE, -mean),\n      ymin = mean - 2.58 * se,\n      ymax = mean + 2.58 * se\n    ),\n    width = 0.2,\n    colour = \"black\",\n    alpha = 0.9,\n    linewidth = 0.5\n  ) +\n  geom_point(\n    aes(\n      x = RACE,\n      y = mean,\n      text = paste(\n        \"Race:\", RACE,\n        \"&lt;br&gt;N:\", n,\n        \"&lt;br&gt;Average score:\", round(mean, 2),\n        \"&lt;br&gt;99% CI: [\",\n        round(mean - 2.58 * se, 2),\n        \",\",\n        round(mean + 2.58 * se, 2),\n        \"]\"\n      )\n    ),\n    stat = \"identity\",\n    color = \"red\",\n    size = 1.5,\n    alpha = 1\n  ) +\n  xlab(\"Race\") +\n  ylab(\"Average Maths Score\") +\n  ggtitle(\"99% Confidence Interval of Average Maths Scores by Race\") +\n  theme_minimal() +\n  theme(\n    axis.text.x = element_text(\n      angle = 45,\n      vjust = 0.5,\n      hjust = 1\n    )\n  )\n\n\nWarning in geom_point(aes(x = RACE, y = mean, text = paste(\"Race:\", RACE, :\nIgnoring unknown aesthetics: text\n\n\nCode\nbscols(\n  widths = c(6, 6),\n  ggplotly(p, tooltip = \"text\"),\n  DT::datatable(\n    shared_df,\n    rownames = FALSE,\n    class = \"compact\",\n    width = \"100%\",\n    options = list(\n      pageLength = 10,\n      scrollX = TRUE\n    )\n  ) %&gt;%\n    formatRound(\n      columns = c(\"mean\", \"sd\", \"se\"),\n      digits = 2\n    )\n)"
   },
   {
-    "objectID": "hands_on_exercise_3b.html#learning-reflection",
-    "href": "hands_on_exercise_3b.html#learning-reflection",
-    "title": "Hands-on Exercise 3b",
-    "section": "",
-    "text": "In this section, I learned how animation can be used to show changes over time. gganimate creates GIF-style animations from ggplot objects, while plotly creates interactive animated charts with play buttons and sliders."
+    "objectID": "hands_on_exercise_4c.html#mean-point-interval-plot",
+    "href": "hands_on_exercise_4c.html#mean-point-interval-plot",
+    "title": "Hands-on Exercise 4c",
+    "section": "4.1 Mean Point Interval Plot",
+    "text": "4.1 Mean Point Interval Plot\n\n\nCode\nexam %&gt;%\n  ggplot(\n    aes(\n      x = RACE,\n      y = MATHS\n    )\n  ) +\n  stat_pointinterval() +\n  labs(\n    title = \"Visualising Confidence Intervals of Mean Maths Score\",\n    subtitle = \"Mean point + multiple interval plot\",\n    x = \"Race\",\n    y = \"Maths score\"\n  ) +\n  theme_minimal()"
+  },
+  {
+    "objectID": "hands_on_exercise_4c.html#median-point-interval-plot",
+    "href": "hands_on_exercise_4c.html#median-point-interval-plot",
+    "title": "Hands-on Exercise 4c",
+    "section": "4.2 Median Point Interval Plot",
+    "text": "4.2 Median Point Interval Plot\n\n\nCode\nexam %&gt;%\n  ggplot(\n    aes(\n      x = RACE,\n      y = MATHS\n    )\n  ) +\n  stat_pointinterval(\n    .width = 0.95,\n    .point = median,\n    .interval = qi\n  ) +\n  labs(\n    title = \"Visualising Confidence Intervals of Median Maths Score\",\n    subtitle = \"Median point + interval plot\",\n    x = \"Race\",\n    y = \"Maths score\"\n  ) +\n  theme_minimal()\n\n\nWarning in layer_slabinterval(data = data, mapping = mapping, stat =\nStatPointinterval, : Ignoring unknown parameters: `.point` and `.interval`"
+  },
+  {
+    "objectID": "hands_on_exercise_4c.html#multiple-interval-plot",
+    "href": "hands_on_exercise_4c.html#multiple-interval-plot",
+    "title": "Hands-on Exercise 4c",
+    "section": "4.3 Multiple Interval Plot",
+    "text": "4.3 Multiple Interval Plot\n\n\nCode\nexam %&gt;%\n  ggplot(\n    aes(\n      x = RACE,\n      y = MATHS\n    )\n  ) +\n  stat_pointinterval(\n    .width = c(0.95, 0.99),\n    show.legend = TRUE\n  ) +\n  labs(\n    title = \"Visualising 95% and 99% Intervals of Mean Maths Score\",\n    subtitle = \"Mean point + multiple interval plot\",\n    x = \"Race\",\n    y = \"Maths score\"\n  ) +\n  theme_minimal()"
+  },
+  {
+    "objectID": "hands_on_exercise_4c.html#gradient-interval-plot",
+    "href": "hands_on_exercise_4c.html#gradient-interval-plot",
+    "title": "Hands-on Exercise 4c",
+    "section": "4.4 Gradient Interval Plot",
+    "text": "4.4 Gradient Interval Plot\n\n\nCode\nexam %&gt;%\n  ggplot(\n    aes(\n      x = RACE,\n      y = MATHS\n    )\n  ) +\n  stat_gradientinterval(\n    fill = \"skyblue\",\n    show.legend = TRUE\n  ) +\n  labs(\n    title = \"Visualising Confidence Intervals of Mean Maths Score\",\n    subtitle = \"Gradient + interval plot\",\n    x = \"Race\",\n    y = \"Maths score\"\n  ) +\n  theme_minimal()\n\n\nWarning in draw_slabs(self, ...): `fill_type = \"gradient\"` is not supported by the current graphics device.\nℹ Falling back to `fill_type = \"segments\"`.\n→ If you believe your current graphics device does support `fill_type =\n  \"gradient\"` but auto-detection failed, try setting `fill_type = \"gradient\"`\n  explicitly. If this causes the gradient to display correctly, then this\n  warning is likely a false positive caused by the graphics device failing to\n  properly report its support for the `\"LinearGradient\"` pattern via\n  `grDevices::dev.capabilities()`. Consider reporting a bug to the author of\n  the graphics device.\nℹ For more information, see the documentation for `fill_type` in\n  `ggdist::geom_slabinterval()` or the documentation for\n  `ggplot2::check_device()`.\nCaused by warning in `draw_slabs()`:\n! Unable to check the capabilities of the png device."
+  },
+  {
+    "objectID": "hands_on_exercise_4c.html#learning-reflection",
+    "href": "hands_on_exercise_4c.html#learning-reflection",
+    "title": "Hands-on Exercise 4c",
+    "section": "Learning Reflection",
+    "text": "Learning Reflection\nIn this exercise, I learned that uncertainty should not be hidden in visual analytics. Error bars, confidence intervals, and interval plots help communicate how reliable or uncertain a point estimate is. Interactive visualisation also helps users inspect the uncertainty values more clearly."
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#overview-1",
+    "href": "hands_on_exercise_4a.html#overview-1",
+    "title": "Hands-on Exercise 4a",
+    "section": "Overview",
+    "text": "Overview\nThis hands-on exercise focuses on visualising distribution using ridgeline plots and raincloud plots."
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#setup",
+    "href": "hands_on_exercise_4a.html#setup",
+    "title": "Hands-on Exercise 4a",
+    "section": "Setup",
+    "text": "Setup\n\n\nCode\nif (!require(pacman)) install.packages(\"pacman\")\n\npacman::p_load(\n  ggdist,\n  ggridges,\n  ggthemes,\n  colorspace,\n  tidyverse\n)\n\nexam &lt;- read_csv(\"Exam_data.csv\")"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#data-preview",
+    "href": "hands_on_exercise_4a.html#data-preview",
+    "title": "Hands-on Exercise 4a",
+    "section": "Data Preview",
+    "text": "Data Preview\n\n\nCode\nglimpse(exam)\n\n\nRows: 322\nColumns: 7\n$ ID      &lt;chr&gt; \"Student321\", \"Student305\", \"Student289\", \"Student227\", \"Stude…\n$ CLASS   &lt;chr&gt; \"3I\", \"3I\", \"3H\", \"3F\", \"3I\", \"3I\", \"3I\", \"3I\", \"3I\", \"3H\", \"3…\n$ GENDER  &lt;chr&gt; \"Male\", \"Female\", \"Male\", \"Male\", \"Male\", \"Female\", \"Male\", \"M…\n$ RACE    &lt;chr&gt; \"Malay\", \"Malay\", \"Chinese\", \"Chinese\", \"Malay\", \"Malay\", \"Chi…\n$ ENGLISH &lt;dbl&gt; 21, 24, 26, 27, 27, 31, 31, 31, 33, 34, 34, 36, 36, 36, 37, 38…\n$ MATHS   &lt;dbl&gt; 9, 22, 16, 77, 11, 16, 21, 18, 19, 49, 39, 35, 23, 36, 49, 30,…\n$ SCIENCE &lt;dbl&gt; 15, 16, 16, 31, 25, 16, 25, 27, 15, 37, 42, 22, 32, 36, 35, 45…"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#basic-ridgeline-plot",
+    "href": "hands_on_exercise_4a.html#basic-ridgeline-plot",
+    "title": "Hands-on Exercise 4a",
+    "section": "1.1 Basic Ridgeline Plot",
+    "text": "1.1 Basic Ridgeline Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS\n  )\n) +\n  geom_density_ridges(\n    scale = 3,\n    rel_min_height = 0.01,\n    bandwidth = 3.4,\n    fill = colorspace::lighten(\"#7097BB\", 0.3),\n    color = \"white\"\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-gradient-fill",
+    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-gradient-fill",
+    "title": "Hands-on Exercise 4a",
+    "section": "1.2 Ridgeline Plot with Gradient Fill",
+    "text": "1.2 Ridgeline Plot with Gradient Fill\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = after_stat(x)\n  )\n) +\n  geom_density_ridges_gradient(\n    scale = 3,\n    rel_min_height = 0.01\n  ) +\n  scale_fill_viridis_c(\n    name = \"English score\",\n    option = \"C\"\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-tail-probability",
+    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-tail-probability",
+    "title": "Hands-on Exercise 4a",
+    "section": "1.3 Ridgeline Plot with Tail Probability",
+    "text": "1.3 Ridgeline Plot with Tail Probability\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = 0.5 - abs(0.5 - after_stat(ecdf))\n  )\n) +\n  stat_density_ridges(\n    geom = \"density_ridges_gradient\",\n    calc_ecdf = TRUE\n  ) +\n  scale_fill_viridis_c(\n    name = \"Tail probability\",\n    direction = -1\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-quartile-lines",
+    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-quartile-lines",
+    "title": "Hands-on Exercise 4a",
+    "section": "1.4 Ridgeline Plot with Quartile Lines",
+    "text": "1.4 Ridgeline Plot with Quartile Lines\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = factor(after_stat(quantile))\n  )\n) +\n  stat_density_ridges(\n    geom = \"density_ridges_gradient\",\n    calc_ecdf = TRUE,\n    quantiles = 4,\n    quantile_lines = TRUE\n  ) +\n  scale_fill_viridis_d(name = \"Quartiles\") +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-95-probability-range",
+    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-95-probability-range",
+    "title": "Hands-on Exercise 4a",
+    "section": "1.5 Ridgeline Plot with 95% Probability Range",
+    "text": "1.5 Ridgeline Plot with 95% Probability Range\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = factor(after_stat(quantile))\n  )\n) +\n  stat_density_ridges(\n    geom = \"density_ridges_gradient\",\n    calc_ecdf = TRUE,\n    quantiles = c(0.025, 0.975)\n  ) +\n  scale_fill_manual(\n    name = \"Probability\",\n    values = c(\"#FF0000A0\", \"#A0A0A0A0\", \"#0000FFA0\"),\n    labels = c(\"(0, 0.025]\", \"(0.025, 0.975]\", \"(0.975, 1]\")\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#half-eye-plot",
+    "href": "hands_on_exercise_4a.html#half-eye-plot",
+    "title": "Hands-on Exercise 4a",
+    "section": "2.1 Half-eye Plot",
+    "text": "2.1 Half-eye Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  labs(\n    title = \"Half-eye Plot of English Scores by Race\",\n    x = \"Race\",\n    y = \"English score\"\n  )"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot",
+    "href": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot",
+    "title": "Hands-on Exercise 4a",
+    "section": "2.2 Half-eye Plot with Boxplot",
+    "text": "2.2 Half-eye Plot with Boxplot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  geom_boxplot(\n    width = 0.20,\n    outlier.shape = NA\n  ) +\n  labs(\n    title = \"English Scores by Race\",\n    x = \"Race\",\n    y = \"English score\"\n  )"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot-and-dot-plot",
+    "href": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot-and-dot-plot",
+    "title": "Hands-on Exercise 4a",
+    "section": "2.3 Half-eye Plot with Boxplot and Dot Plot",
+    "text": "2.3 Half-eye Plot with Boxplot and Dot Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  geom_boxplot(\n    width = 0.20,\n    outlier.shape = NA\n  ) +\n  stat_dots(\n    side = \"left\",\n    justification = 1.2,\n    binwidth = 0.5,\n    dotsize = 2\n  ) +\n  labs(\n    title = \"Raincloud-style Distribution of English Scores\",\n    x = \"Race\",\n    y = \"English score\"\n  )"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#final-raincloud-plot",
+    "href": "hands_on_exercise_4a.html#final-raincloud-plot",
+    "title": "Hands-on Exercise 4a",
+    "section": "2.4 Final Raincloud Plot",
+    "text": "2.4 Final Raincloud Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  geom_boxplot(\n    width = 0.20,\n    outlier.shape = NA\n  ) +\n  stat_dots(\n    side = \"left\",\n    justification = 1.2,\n    binwidth = 0.5,\n    dotsize = 1.5\n  ) +\n  coord_flip() +\n  theme_economist() +\n  labs(\n    title = \"Raincloud Plot of English Scores by Race\",\n    x = \"Race\",\n    y = \"English score\"\n  )\n\n\nWarning: The provided binwidth will cause dots to overflow the boundaries of the\ngeometry.\n→ Set `binwidth = NA` to automatically determine a binwidth that ensures dots\n  fit within the bounds,\n→ OR set `overflow = \"compress\"` to automatically reduce the spacing between\n  dots to ensure the dots fit within the bounds,\n→ OR set `overflow = \"keep\"` to allow dots to overflow the bounds of the\n  geometry without producing a warning.\nℹ For more information, see the documentation of the `binwidth` and `overflow`\n  arguments of `?ggdist::geom_dots()` or the section on constraining dot sizes\n  in vignette(\"dotsinterval\") (`vignette(ggdist::dotsinterval)`)."
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#learning-reflection",
+    "href": "hands_on_exercise_4a.html#learning-reflection",
+    "title": "Hands-on Exercise 4a",
+    "section": "Learning Reflection",
+    "text": "Learning Reflection\nIn this exercise, I learned that ridgeline plots are useful for comparing score distributions across many groups, while raincloud plots combine density, boxplot, and raw observation views into one chart.\nThis hands-on exercise focuses on visualising distribution using ridgeline plots and raincloud plots."
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#setup-1",
+    "href": "hands_on_exercise_4a.html#setup-1",
+    "title": "Hands-on Exercise 4a",
+    "section": "Setup",
+    "text": "Setup\n\n\nCode\nif (!require(pacman)) install.packages(\"pacman\")\n\npacman::p_load(\n  ggdist,\n  ggridges,\n  ggthemes,\n  colorspace,\n  tidyverse\n)\n\nexam &lt;- read_csv(\"Exam_data.csv\")"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#data-preview-1",
+    "href": "hands_on_exercise_4a.html#data-preview-1",
+    "title": "Hands-on Exercise 4a",
+    "section": "Data Preview",
+    "text": "Data Preview\n\n\nCode\nglimpse(exam)\n\n\nRows: 322\nColumns: 7\n$ ID      &lt;chr&gt; \"Student321\", \"Student305\", \"Student289\", \"Student227\", \"Stude…\n$ CLASS   &lt;chr&gt; \"3I\", \"3I\", \"3H\", \"3F\", \"3I\", \"3I\", \"3I\", \"3I\", \"3I\", \"3H\", \"3…\n$ GENDER  &lt;chr&gt; \"Male\", \"Female\", \"Male\", \"Male\", \"Male\", \"Female\", \"Male\", \"M…\n$ RACE    &lt;chr&gt; \"Malay\", \"Malay\", \"Chinese\", \"Chinese\", \"Malay\", \"Malay\", \"Chi…\n$ ENGLISH &lt;dbl&gt; 21, 24, 26, 27, 27, 31, 31, 31, 33, 34, 34, 36, 36, 36, 37, 38…\n$ MATHS   &lt;dbl&gt; 9, 22, 16, 77, 11, 16, 21, 18, 19, 49, 39, 35, 23, 36, 49, 30,…\n$ SCIENCE &lt;dbl&gt; 15, 16, 16, 31, 25, 16, 25, 27, 15, 37, 42, 22, 32, 36, 35, 45…"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#basic-ridgeline-plot-1",
+    "href": "hands_on_exercise_4a.html#basic-ridgeline-plot-1",
+    "title": "Hands-on Exercise 4a",
+    "section": "1.1 Basic Ridgeline Plot",
+    "text": "1.1 Basic Ridgeline Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS\n  )\n) +\n  geom_density_ridges(\n    scale = 3,\n    rel_min_height = 0.01,\n    bandwidth = 3.4,\n    fill = colorspace::lighten(\"#7097BB\", 0.3),\n    color = \"white\"\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-gradient-fill-1",
+    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-gradient-fill-1",
+    "title": "Hands-on Exercise 4a",
+    "section": "1.2 Ridgeline Plot with Gradient Fill",
+    "text": "1.2 Ridgeline Plot with Gradient Fill\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = after_stat(x)\n  )\n) +\n  geom_density_ridges_gradient(\n    scale = 3,\n    rel_min_height = 0.01\n  ) +\n  scale_fill_viridis_c(\n    name = \"English score\",\n    option = \"C\"\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-tail-probability-1",
+    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-tail-probability-1",
+    "title": "Hands-on Exercise 4a",
+    "section": "1.3 Ridgeline Plot with Tail Probability",
+    "text": "1.3 Ridgeline Plot with Tail Probability\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = 0.5 - abs(0.5 - after_stat(ecdf))\n  )\n) +\n  stat_density_ridges(\n    geom = \"density_ridges_gradient\",\n    calc_ecdf = TRUE\n  ) +\n  scale_fill_viridis_c(\n    name = \"Tail probability\",\n    direction = -1\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-quartile-lines-1",
+    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-quartile-lines-1",
+    "title": "Hands-on Exercise 4a",
+    "section": "1.4 Ridgeline Plot with Quartile Lines",
+    "text": "1.4 Ridgeline Plot with Quartile Lines\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = factor(after_stat(quantile))\n  )\n) +\n  stat_density_ridges(\n    geom = \"density_ridges_gradient\",\n    calc_ecdf = TRUE,\n    quantiles = 4,\n    quantile_lines = TRUE\n  ) +\n  scale_fill_viridis_d(name = \"Quartiles\") +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-95-probability-range-1",
+    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-95-probability-range-1",
+    "title": "Hands-on Exercise 4a",
+    "section": "1.5 Ridgeline Plot with 95% Probability Range",
+    "text": "1.5 Ridgeline Plot with 95% Probability Range\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = factor(after_stat(quantile))\n  )\n) +\n  stat_density_ridges(\n    geom = \"density_ridges_gradient\",\n    calc_ecdf = TRUE,\n    quantiles = c(0.025, 0.975)\n  ) +\n  scale_fill_manual(\n    name = \"Probability\",\n    values = c(\"#FF0000A0\", \"#A0A0A0A0\", \"#0000FFA0\"),\n    labels = c(\"(0, 0.025]\", \"(0.025, 0.975]\", \"(0.975, 1]\")\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#half-eye-plot-1",
+    "href": "hands_on_exercise_4a.html#half-eye-plot-1",
+    "title": "Hands-on Exercise 4a",
+    "section": "2.1 Half-eye Plot",
+    "text": "2.1 Half-eye Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  labs(\n    title = \"Half-eye Plot of English Scores by Race\",\n    x = \"Race\",\n    y = \"English score\"\n  )"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot-1",
+    "href": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot-1",
+    "title": "Hands-on Exercise 4a",
+    "section": "2.2 Half-eye Plot with Boxplot",
+    "text": "2.2 Half-eye Plot with Boxplot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  geom_boxplot(\n    width = 0.20,\n    outlier.shape = NA\n  ) +\n  labs(\n    title = \"English Scores by Race\",\n    x = \"Race\",\n    y = \"English score\"\n  )"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot-and-dot-plot-1",
+    "href": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot-and-dot-plot-1",
+    "title": "Hands-on Exercise 4a",
+    "section": "2.3 Half-eye Plot with Boxplot and Dot Plot",
+    "text": "2.3 Half-eye Plot with Boxplot and Dot Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  geom_boxplot(\n    width = 0.20,\n    outlier.shape = NA\n  ) +\n  stat_dots(\n    side = \"left\",\n    justification = 1.2,\n    binwidth = 0.5,\n    dotsize = 2\n  ) +\n  labs(\n    title = \"Raincloud-style Distribution of English Scores\",\n    x = \"Race\",\n    y = \"English score\"\n  )"
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#final-raincloud-plot-1",
+    "href": "hands_on_exercise_4a.html#final-raincloud-plot-1",
+    "title": "Hands-on Exercise 4a",
+    "section": "2.4 Final Raincloud Plot",
+    "text": "2.4 Final Raincloud Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  geom_boxplot(\n    width = 0.20,\n    outlier.shape = NA\n  ) +\n  stat_dots(\n    side = \"left\",\n    justification = 1.2,\n    binwidth = 0.5,\n    dotsize = 1.5\n  ) +\n  coord_flip() +\n  theme_economist() +\n  labs(\n    title = \"Raincloud Plot of English Scores by Race\",\n    x = \"Race\",\n    y = \"English score\"\n  )\n\n\nWarning: The provided binwidth will cause dots to overflow the boundaries of the\ngeometry.\n→ Set `binwidth = NA` to automatically determine a binwidth that ensures dots\n  fit within the bounds,\n→ OR set `overflow = \"compress\"` to automatically reduce the spacing between\n  dots to ensure the dots fit within the bounds,\n→ OR set `overflow = \"keep\"` to allow dots to overflow the bounds of the\n  geometry without producing a warning.\nℹ For more information, see the documentation of the `binwidth` and `overflow`\n  arguments of `?ggdist::geom_dots()` or the section on constraining dot sizes\n  in vignette(\"dotsinterval\") (`vignette(ggdist::dotsinterval)`)."
+  },
+  {
+    "objectID": "hands_on_exercise_4a.html#learning-reflection-1",
+    "href": "hands_on_exercise_4a.html#learning-reflection-1",
+    "title": "Hands-on Exercise 4a",
+    "section": "Learning Reflection",
+    "text": "Learning Reflection\nIn this exercise, I learned that ridgeline plots are useful for comparing score distributions across many groups, while raincloud plots combine density, boxplot, and raw observation views into one chart."
   },
   {
     "objectID": "hands_on_exercise_3a.html",
@@ -287,52 +378,241 @@
     "text": "2.4 Coordinated Multiple Views with plotly\n\n\nCode\nd &lt;- highlight_key(exam_data)\n\np1 &lt;- ggplot(d, aes(x = MATHS, y = ENGLISH)) +\n  geom_point(size = 1) +\n  coord_cartesian(\n    xlim = c(0, 100),\n    ylim = c(0, 100)\n  ) +\n  labs(\n    title = \"English vs Maths\",\n    x = \"Maths\",\n    y = \"English\"\n  )\n\np2 &lt;- ggplot(d, aes(x = MATHS, y = SCIENCE)) +\n  geom_point(size = 1) +\n  coord_cartesian(\n    xlim = c(0, 100),\n    ylim = c(0, 100)\n  ) +\n  labs(\n    title = \"Science vs Maths\",\n    x = \"Maths\",\n    y = \"Science\"\n  )\n\nsubplot(\n  ggplotly(p1),\n  ggplotly(p2),\n  titleX = TRUE,\n  titleY = TRUE\n)"
   },
   {
-    "objectID": "hands_on_exercise_3a.html#setup-for-animated-graphics",
-    "href": "hands_on_exercise_3a.html#setup-for-animated-graphics",
-    "title": "Hands-on Exercise 3",
-    "section": "Setup for Animated Graphics",
-    "text": "Setup for Animated Graphics\n\n\nCode\npacman::p_load(\n  readxl,\n  gifski,\n  gapminder,\n  plotly,\n  gganimate,\n  tidyverse\n)"
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "About this site\n\n1 + 1\n\n[1] 2"
   },
   {
-    "objectID": "hands_on_exercise_3a.html#import-global-population-data",
-    "href": "hands_on_exercise_3a.html#import-global-population-data",
-    "title": "Hands-on Exercise 3",
-    "section": "Import Global Population Data",
-    "text": "Import Global Population Data\n\n\nCode\nglobalPop &lt;- read_xls(\"GlobalPopulation.xls\", sheet = \"Data\") %&gt;%\n  mutate(\n    across(c(Country, Continent), as.factor),\n    Year = as.integer(Year)\n  )"
+    "objectID": "hands_on_exercise_3b.html",
+    "href": "hands_on_exercise_3b.html",
+    "title": "Hands-on Exercise 3b",
+    "section": "",
+    "text": "This section extends Hands-on Exercise 3 by creating animated statistical graphics using gganimate and plotly.\n\n\n\n\nCode\npacman::p_load(\n  readxl,\n  gifski,\n  gapminder,\n  plotly,\n  gganimate,\n  tidyverse\n)\n\n\n\n\n\n\n\nCode\nglobalPop &lt;- read_xls(\"GlobalPopulation.xls\", sheet = \"Data\") %&gt;%\n  mutate(\n    across(c(Country, Continent), as.factor),\n    Year = as.integer(Year)\n  )\n\n\n\n\n\n\n\nCode\nggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(alpha = 0.7, show.legend = FALSE) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    title = \"Population Structure\",\n    x = \"% Aged\",\n    y = \"% Young\"\n  )\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nCode\np &lt;- ggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(alpha = 0.7, show.legend = FALSE) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    title = \"Year: {frame_time}\",\n    x = \"% Aged\",\n    y = \"% Young\"\n  ) +\n  transition_time(Year) +\n  ease_aes(\"linear\")\n\nanimate(p, renderer = gifski_renderer())\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nCode\ngg &lt;- ggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(\n    aes(frame = Year),\n    alpha = 0.7\n  ) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    x = \"% Aged\",\n    y = \"% Young\"\n  ) +\n  theme(legend.position = \"none\")\n\n\nWarning in geom_point(aes(frame = Year), alpha = 0.7): Ignoring unknown\naesthetics: frame\n\n\nCode\nggplotly(gg)\n\n\nWarning in p$x$data[firstFrame] &lt;- p$x$frames[[1]]$data: number of items to\nreplace is not a multiple of replacement length\n\n\n\n\n\n\n\n\n\n\n\nCode\nglobalPop %&gt;%\n  plot_ly(\n    x = ~Old,\n    y = ~Young,\n    size = ~Population,\n    color = ~Continent,\n    sizes = c(2, 100),\n    frame = ~Year,\n    text = ~Country,\n    hoverinfo = \"text\",\n    type = \"scatter\",\n    mode = \"markers\"\n  ) %&gt;%\n  layout(showlegend = FALSE)\n\n\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\n\n\n\n\n\n\n\n\n\nIn this section, I learned how animation can be used to show changes over time. gganimate creates GIF-style animations from ggplot objects, while plotly creates interactive animated charts with play buttons and sliders."
   },
   {
-    "objectID": "hands_on_exercise_3a.html#static-population-bubble-plot",
-    "href": "hands_on_exercise_3a.html#static-population-bubble-plot",
-    "title": "Hands-on Exercise 3",
-    "section": "Static Population Bubble Plot",
-    "text": "Static Population Bubble Plot\n\n\nCode\nggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(alpha = 0.7, show.legend = FALSE) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    title = \"Population Structure\",\n    x = \"% Aged\",\n    y = \"% Young\"\n  )"
+    "objectID": "hands_on_exercise_3b.html#setup-for-animated-graphics",
+    "href": "hands_on_exercise_3b.html#setup-for-animated-graphics",
+    "title": "Hands-on Exercise 3b",
+    "section": "",
+    "text": "Code\npacman::p_load(\n  readxl,\n  gifski,\n  gapminder,\n  plotly,\n  gganimate,\n  tidyverse\n)"
   },
   {
-    "objectID": "hands_on_exercise_3a.html#animated-bubble-plot-using-gganimate",
-    "href": "hands_on_exercise_3a.html#animated-bubble-plot-using-gganimate",
-    "title": "Hands-on Exercise 3",
-    "section": "Animated Bubble Plot using gganimate",
-    "text": "Animated Bubble Plot using gganimate\n\n\nCode\np &lt;- ggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(alpha = 0.7, show.legend = FALSE) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    title = \"Year: {frame_time}\",\n    x = \"% Aged\",\n    y = \"% Young\"\n  ) +\n  transition_time(Year) +\n  ease_aes(\"linear\")\n\nanimate(p, renderer = gifski_renderer())"
+    "objectID": "hands_on_exercise_3b.html#import-global-population-data",
+    "href": "hands_on_exercise_3b.html#import-global-population-data",
+    "title": "Hands-on Exercise 3b",
+    "section": "",
+    "text": "Code\nglobalPop &lt;- read_xls(\"GlobalPopulation.xls\", sheet = \"Data\") %&gt;%\n  mutate(\n    across(c(Country, Continent), as.factor),\n    Year = as.integer(Year)\n  )"
   },
   {
-    "objectID": "hands_on_exercise_3a.html#animated-bubble-plot-using-ggplotly",
-    "href": "hands_on_exercise_3a.html#animated-bubble-plot-using-ggplotly",
-    "title": "Hands-on Exercise 3",
-    "section": "Animated Bubble Plot using ggplotly",
-    "text": "Animated Bubble Plot using ggplotly\n\n\nCode\ngg &lt;- ggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(\n    aes(frame = Year),\n    alpha = 0.7\n  ) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    x = \"% Aged\",\n    y = \"% Young\"\n  ) +\n  theme(legend.position = \"none\")\n\n\nWarning in geom_point(aes(frame = Year), alpha = 0.7): Ignoring unknown\naesthetics: frame\n\n\nCode\nggplotly(gg)\n\n\nWarning in p$x$data[firstFrame] &lt;- p$x$frames[[1]]$data: number of items to\nreplace is not a multiple of replacement length"
+    "objectID": "hands_on_exercise_3b.html#static-population-bubble-plot",
+    "href": "hands_on_exercise_3b.html#static-population-bubble-plot",
+    "title": "Hands-on Exercise 3b",
+    "section": "",
+    "text": "Code\nggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(alpha = 0.7, show.legend = FALSE) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    title = \"Population Structure\",\n    x = \"% Aged\",\n    y = \"% Young\"\n  )"
   },
   {
-    "objectID": "hands_on_exercise_3a.html#animated-bubble-plot-using-plot_ly",
-    "href": "hands_on_exercise_3a.html#animated-bubble-plot-using-plot_ly",
-    "title": "Hands-on Exercise 3",
-    "section": "Animated Bubble Plot using plot_ly",
-    "text": "Animated Bubble Plot using plot_ly\n\n\nCode\nglobalPop %&gt;%\n  plot_ly(\n    x = ~Old,\n    y = ~Young,\n    size = ~Population,\n    color = ~Continent,\n    sizes = c(2, 100),\n    frame = ~Year,\n    text = ~Country,\n    hoverinfo = \"text\",\n    type = \"scatter\",\n    mode = \"markers\"\n  ) %&gt;%\n  layout(showlegend = FALSE)\n\n\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values."
+    "objectID": "hands_on_exercise_3b.html#animated-bubble-plot-using-gganimate",
+    "href": "hands_on_exercise_3b.html#animated-bubble-plot-using-gganimate",
+    "title": "Hands-on Exercise 3b",
+    "section": "",
+    "text": "Code\np &lt;- ggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(alpha = 0.7, show.legend = FALSE) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    title = \"Year: {frame_time}\",\n    x = \"% Aged\",\n    y = \"% Young\"\n  ) +\n  transition_time(Year) +\n  ease_aes(\"linear\")\n\nanimate(p, renderer = gifski_renderer())"
   },
   {
-    "objectID": "hands_on_exercise_3a.html#learning-reflection-1",
-    "href": "hands_on_exercise_3a.html#learning-reflection-1",
-    "title": "Hands-on Exercise 3",
+    "objectID": "hands_on_exercise_3b.html#animated-bubble-plot-using-ggplotly",
+    "href": "hands_on_exercise_3b.html#animated-bubble-plot-using-ggplotly",
+    "title": "Hands-on Exercise 3b",
+    "section": "",
+    "text": "Code\ngg &lt;- ggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(\n    aes(frame = Year),\n    alpha = 0.7\n  ) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    x = \"% Aged\",\n    y = \"% Young\"\n  ) +\n  theme(legend.position = \"none\")\n\n\nWarning in geom_point(aes(frame = Year), alpha = 0.7): Ignoring unknown\naesthetics: frame\n\n\nCode\nggplotly(gg)\n\n\nWarning in p$x$data[firstFrame] &lt;- p$x$frames[[1]]$data: number of items to\nreplace is not a multiple of replacement length"
+  },
+  {
+    "objectID": "hands_on_exercise_3b.html#animated-bubble-plot-using-plot_ly",
+    "href": "hands_on_exercise_3b.html#animated-bubble-plot-using-plot_ly",
+    "title": "Hands-on Exercise 3b",
+    "section": "",
+    "text": "Code\nglobalPop %&gt;%\n  plot_ly(\n    x = ~Old,\n    y = ~Young,\n    size = ~Population,\n    color = ~Continent,\n    sizes = c(2, 100),\n    frame = ~Year,\n    text = ~Country,\n    hoverinfo = \"text\",\n    type = \"scatter\",\n    mode = \"markers\"\n  ) %&gt;%\n  layout(showlegend = FALSE)\n\n\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values."
+  },
+  {
+    "objectID": "hands_on_exercise_3b.html#learning-reflection",
+    "href": "hands_on_exercise_3b.html#learning-reflection",
+    "title": "Hands-on Exercise 3b",
+    "section": "",
+    "text": "In this section, I learned how animation can be used to show changes over time. gganimate creates GIF-style animations from ggplot objects, while plotly creates interactive animated charts with play buttons and sliders."
+  },
+  {
+    "objectID": "hands_on_exercise_4b.html",
+    "href": "hands_on_exercise_4b.html",
+    "title": "Hands-on Exercise 4b",
+    "section": "",
+    "text": "This hands-on exercise focuses on visual statistical analysis using the ggstatsplot package."
+  },
+  {
+    "objectID": "hands_on_exercise_4b.html#overview",
+    "href": "hands_on_exercise_4b.html#overview",
+    "title": "Hands-on Exercise 4b",
+    "section": "",
+    "text": "This hands-on exercise focuses on visual statistical analysis using the ggstatsplot package."
+  },
+  {
+    "objectID": "hands_on_exercise_4b.html#setup",
+    "href": "hands_on_exercise_4b.html#setup",
+    "title": "Hands-on Exercise 4b",
+    "section": "Setup",
+    "text": "Setup\n\n\nCode\nif (!require(pacman)) install.packages(\"pacman\")\n\npacman::p_load(\n  ggstatsplot,\n  tidyverse\n)\n\nexam &lt;- read_csv(\"Exam_data.csv\")"
+  },
+  {
+    "objectID": "hands_on_exercise_4b.html#data-preview",
+    "href": "hands_on_exercise_4b.html#data-preview",
+    "title": "Hands-on Exercise 4b",
+    "section": "Data Preview",
+    "text": "Data Preview\n\n\nCode\nglimpse(exam)\n\n\nRows: 322\nColumns: 7\n$ ID      &lt;chr&gt; \"Student321\", \"Student305\", \"Student289\", \"Student227\", \"Stude…\n$ CLASS   &lt;chr&gt; \"3I\", \"3I\", \"3H\", \"3F\", \"3I\", \"3I\", \"3I\", \"3I\", \"3I\", \"3H\", \"3…\n$ GENDER  &lt;chr&gt; \"Male\", \"Female\", \"Male\", \"Male\", \"Male\", \"Female\", \"Male\", \"M…\n$ RACE    &lt;chr&gt; \"Malay\", \"Malay\", \"Chinese\", \"Chinese\", \"Malay\", \"Malay\", \"Chi…\n$ ENGLISH &lt;dbl&gt; 21, 24, 26, 27, 27, 31, 31, 31, 33, 34, 34, 36, 36, 36, 37, 38…\n$ MATHS   &lt;dbl&gt; 9, 22, 16, 77, 11, 16, 21, 18, 19, 49, 39, 35, 23, 36, 49, 30,…\n$ SCIENCE &lt;dbl&gt; 15, 16, 16, 31, 25, 16, 25, 27, 15, 37, 42, 22, 32, 36, 35, 45…"
+  },
+  {
+    "objectID": "hands_on_exercise_4b.html#one-sample-test-for-english-scores",
+    "href": "hands_on_exercise_4b.html#one-sample-test-for-english-scores",
+    "title": "Hands-on Exercise 4b",
+    "section": "1.1 One-sample Test for English Scores",
+    "text": "1.1 One-sample Test for English Scores\n\n\nCode\nset.seed(1234)\n\ngghistostats(\n  data = exam,\n  x = ENGLISH,\n  type = \"bayes\",\n  test.value = 60,\n  xlab = \"English scores\"\n)"
+  },
+  {
+    "objectID": "hands_on_exercise_4b.html#maths-scores-by-gender",
+    "href": "hands_on_exercise_4b.html#maths-scores-by-gender",
+    "title": "Hands-on Exercise 4b",
+    "section": "2.1 Maths Scores by Gender",
+    "text": "2.1 Maths Scores by Gender\n\n\nCode\nggbetweenstats(\n  data = exam,\n  x = GENDER,\n  y = MATHS,\n  type = \"np\",\n  messages = FALSE\n)"
+  },
+  {
+    "objectID": "hands_on_exercise_4b.html#english-scores-by-race",
+    "href": "hands_on_exercise_4b.html#english-scores-by-race",
+    "title": "Hands-on Exercise 4b",
+    "section": "3.1 English Scores by Race",
+    "text": "3.1 English Scores by Race\n\n\nCode\nggbetweenstats(\n  data = exam,\n  x = RACE,\n  y = ENGLISH,\n  type = \"p\",\n  mean.ci = TRUE,\n  pairwise.comparisons = TRUE,\n  pairwise.display = \"s\",\n  p.adjust.method = \"fdr\",\n  messages = FALSE\n)"
+  },
+  {
+    "objectID": "hands_on_exercise_4b.html#maths-scores-vs-english-scores",
+    "href": "hands_on_exercise_4b.html#maths-scores-vs-english-scores",
+    "title": "Hands-on Exercise 4b",
+    "section": "4.1 Maths Scores vs English Scores",
+    "text": "4.1 Maths Scores vs English Scores\n\n\nCode\nggscatterstats(\n  data = exam,\n  x = MATHS,\n  y = ENGLISH,\n  marginal = FALSE\n)"
+  },
+  {
+    "objectID": "hands_on_exercise_4b.html#binning-maths-scores",
+    "href": "hands_on_exercise_4b.html#binning-maths-scores",
+    "title": "Hands-on Exercise 4b",
+    "section": "5.1 Binning Maths Scores",
+    "text": "5.1 Binning Maths Scores\n\n\nCode\nexam1 &lt;- exam %&gt;%\n  mutate(\n    MATHS_bins = cut(\n      MATHS,\n      breaks = c(0, 60, 75, 85, 100),\n      include.lowest = TRUE,\n      labels = c(\"0-60\", \"61-75\", \"76-85\", \"86-100\")\n    )\n  )\n\nexam1 %&gt;%\n  count(MATHS_bins, GENDER)\n\n\n# A tibble: 8 × 3\n  MATHS_bins GENDER     n\n  &lt;fct&gt;      &lt;chr&gt;  &lt;int&gt;\n1 0-60       Female    44\n2 0-60       Male      43\n3 61-75      Female    48\n4 61-75      Male      36\n5 76-85      Female    42\n6 76-85      Male      37\n7 86-100     Female    36\n8 86-100     Male      36"
+  },
+  {
+    "objectID": "hands_on_exercise_4b.html#association-between-maths-score-bands-and-gender",
+    "href": "hands_on_exercise_4b.html#association-between-maths-score-bands-and-gender",
+    "title": "Hands-on Exercise 4b",
+    "section": "5.2 Association Between Maths Score Bands and Gender",
+    "text": "5.2 Association Between Maths Score Bands and Gender\n\n\nCode\nggbarstats(\n  data = exam1,\n  x = MATHS_bins,\n  y = GENDER\n)"
+  },
+  {
+    "objectID": "hands_on_exercise_4b.html#science-scores-by-gender",
+    "href": "hands_on_exercise_4b.html#science-scores-by-gender",
+    "title": "Hands-on Exercise 4b",
+    "section": "6.1 Science Scores by Gender",
+    "text": "6.1 Science Scores by Gender\n\n\nCode\nggbetweenstats(\n  data = exam,\n  x = GENDER,\n  y = SCIENCE,\n  type = \"np\",\n  messages = FALSE\n)"
+  },
+  {
+    "objectID": "hands_on_exercise_4b.html#science-scores-vs-maths-scores",
+    "href": "hands_on_exercise_4b.html#science-scores-vs-maths-scores",
+    "title": "Hands-on Exercise 4b",
+    "section": "6.2 Science Scores vs Maths Scores",
+    "text": "6.2 Science Scores vs Maths Scores\n\n\nCode\nggscatterstats(\n  data = exam,\n  x = SCIENCE,\n  y = MATHS,\n  marginal = FALSE\n)"
+  },
+  {
+    "objectID": "hands_on_exercise_4b.html#learning-reflection",
+    "href": "hands_on_exercise_4b.html#learning-reflection",
+    "title": "Hands-on Exercise 4b",
     "section": "Learning Reflection",
-    "text": "Learning Reflection\nIn this section, I learned how animation can be used to show changes over time. gganimate creates GIF-style animations from ggplot objects, while plotly creates interactive animated charts with play buttons and sliders."
+    "text": "Learning Reflection\nIn this exercise, I learned that ggstatsplot is useful because it combines statistical test results with visualisation. Instead of only showing the chart, it also displays useful statistical information such as test statistics, p-values, confidence intervals, and sample sizes."
+  },
+  {
+    "objectID": "hands_on_exercise_4d.html",
+    "href": "hands_on_exercise_4d.html",
+    "title": "Hands-on Exercise 4d",
+    "section": "",
+    "text": "This hands-on exercise focuses on using funnel plots to make fair comparisons across groups. The example uses cumulative COVID-19 cases and deaths by sub-district in DKI Jakarta."
+  },
+  {
+    "objectID": "hands_on_exercise_4d.html#overview",
+    "href": "hands_on_exercise_4d.html#overview",
+    "title": "Hands-on Exercise 4d",
+    "section": "",
+    "text": "This hands-on exercise focuses on using funnel plots to make fair comparisons across groups. The example uses cumulative COVID-19 cases and deaths by sub-district in DKI Jakarta."
+  },
+  {
+    "objectID": "hands_on_exercise_4d.html#setup",
+    "href": "hands_on_exercise_4d.html#setup",
+    "title": "Hands-on Exercise 4d",
+    "section": "Setup",
+    "text": "Setup\n\n\nCode\nif (!require(pacman)) install.packages(\"pacman\")\n\npacman::p_load(\n  tidyverse,\n  FunnelPlotR,\n  plotly,\n  knitr\n)\n\ncovid19 &lt;- read_csv(\"COVID-19_DKI_Jakarta.csv\") %&gt;%\n  mutate_if(is.character, as.factor)"
+  },
+  {
+    "objectID": "hands_on_exercise_4d.html#data-preview",
+    "href": "hands_on_exercise_4d.html#data-preview",
+    "title": "Hands-on Exercise 4d",
+    "section": "Data Preview",
+    "text": "Data Preview\n\n\nCode\nglimpse(covid19)\n\n\nRows: 267\nColumns: 7\n$ `Sub-district ID` &lt;dbl&gt; 3172051003, 3173041007, 3175041005, 3175031003, 3175…\n$ City              &lt;fct&gt; JAKARTA UTARA, JAKARTA BARAT, JAKARTA TIMUR, JAKARTA…\n$ District          &lt;fct&gt; PADEMANGAN, TAMBORA, KRAMAT JATI, JATINEGARA, CIPAYU…\n$ `Sub-district`    &lt;fct&gt; ANCOL, ANGKE, BALE KAMBANG, BALI MESTER, BAMBU APUS,…\n$ Positive          &lt;dbl&gt; 1776, 1783, 2049, 827, 2866, 1828, 2541, 3608, 2012,…\n$ Recovered         &lt;dbl&gt; 1691, 1720, 1964, 797, 2792, 1757, 2433, 3445, 1937,…\n$ Death             &lt;dbl&gt; 26, 29, 31, 13, 27, 26, 37, 68, 38, 52, 72, 28, 25, …\n\n\n\n\nCode\nknitr::kable(\n  head(covid19),\n  format = \"html\"\n)\n\n\n\n\n\nSub-district ID\nCity\nDistrict\nSub-district\nPositive\nRecovered\nDeath\n\n\n\n\n3172051003\nJAKARTA UTARA\nPADEMANGAN\nANCOL\n1776\n1691\n26\n\n\n3173041007\nJAKARTA BARAT\nTAMBORA\nANGKE\n1783\n1720\n29\n\n\n3175041005\nJAKARTA TIMUR\nKRAMAT JATI\nBALE KAMBANG\n2049\n1964\n31\n\n\n3175031003\nJAKARTA TIMUR\nJATINEGARA\nBALI MESTER\n827\n797\n13\n\n\n3175101006\nJAKARTA TIMUR\nCIPAYUNG\nBAMBU APUS\n2866\n2792\n27\n\n\n3174031002\nJAKARTA SELATAN\nMAMPANG PRAPATAN\nBANGKA\n1828\n1757\n26"
+  },
+  {
+    "objectID": "hands_on_exercise_4d.html#basic-funnel-plot",
+    "href": "hands_on_exercise_4d.html#basic-funnel-plot",
+    "title": "Hands-on Exercise 4d",
+    "section": "1.1 Basic Funnel Plot",
+    "text": "1.1 Basic Funnel Plot\n\n\nCode\nfunnel_plot(\n  .data = covid19,\n  numerator = Positive,\n  denominator = Death,\n  group = `Sub-district`\n)\n\n\n\n\n\n\n\n\n\nA funnel plot object with 267 points of which 0 are outliers. \nPlot is adjusted for overdispersion."
+  },
+  {
+    "objectID": "hands_on_exercise_4d.html#funnel-plot-using-proportion-rate",
+    "href": "hands_on_exercise_4d.html#funnel-plot-using-proportion-rate",
+    "title": "Hands-on Exercise 4d",
+    "section": "1.2 Funnel Plot Using Proportion Rate",
+    "text": "1.2 Funnel Plot Using Proportion Rate\n\n\nCode\nfunnel_plot(\n  .data = covid19,\n  numerator = Death,\n  denominator = Positive,\n  group = `Sub-district`,\n  data_type = \"PR\",\n  xrange = c(0, 6500),\n  yrange = c(0, 0.05)\n)\n\n\nWarning: The `xrange` argument deprecated; please use the `x_range`\n            argument instead.  For more options, see the help: `?funnel_plot`\n\n\nWarning: The `yrange` argument deprecated; please use the `y_range` argument\n            instead.  For more options, see the help: `?funnel_plot`\n\n\n\n\n\n\n\n\n\nA funnel plot object with 267 points of which 7 are outliers. \nPlot is adjusted for overdispersion."
+  },
+  {
+    "objectID": "hands_on_exercise_4d.html#funnel-plot-with-custom-labels",
+    "href": "hands_on_exercise_4d.html#funnel-plot-with-custom-labels",
+    "title": "Hands-on Exercise 4d",
+    "section": "1.3 Funnel Plot with Custom Labels",
+    "text": "1.3 Funnel Plot with Custom Labels\n\n\nCode\nfunnel_plot(\n  .data = covid19,\n  numerator = Death,\n  denominator = Positive,\n  group = `Sub-district`,\n  data_type = \"PR\",\n  xrange = c(0, 6500),\n  yrange = c(0, 0.05),\n  label = NA,\n  title = \"Cumulative COVID-19 Fatality Rate by Cumulative Total Number of COVID-19 Positive Cases\",\n  x_label = \"Cumulative COVID-19 Positive Cases\",\n  y_label = \"Cumulative Fatality Rate\"\n)\n\n\nWarning: The `xrange` argument deprecated; please use the `x_range`\n            argument instead.  For more options, see the help: `?funnel_plot`\n\n\nWarning: The `yrange` argument deprecated; please use the `y_range` argument\n            instead.  For more options, see the help: `?funnel_plot`\n\n\n\n\n\n\n\n\n\nA funnel plot object with 267 points of which 7 are outliers. \nPlot is adjusted for overdispersion."
+  },
+  {
+    "objectID": "hands_on_exercise_4d.html#computing-derived-fields",
+    "href": "hands_on_exercise_4d.html#computing-derived-fields",
+    "title": "Hands-on Exercise 4d",
+    "section": "2.1 Computing Derived Fields",
+    "text": "2.1 Computing Derived Fields\n\n\nCode\ndf &lt;- covid19 %&gt;%\n  mutate(\n    rate = Death / Positive,\n    rate.se = sqrt((rate * (1 - rate)) / Positive)\n  ) %&gt;%\n  filter(\n    rate &gt; 0,\n    Positive &gt; 0,\n    !is.na(rate),\n    !is.na(rate.se)\n  )\n\nfit.mean &lt;- weighted.mean(df$rate, 1 / df$rate.se^2)\n\nknitr::kable(\n  head(df),\n  format = \"html\",\n  digits = 4\n)\n\n\n\n\n\nSub-district ID\nCity\nDistrict\nSub-district\nPositive\nRecovered\nDeath\nrate\nrate.se\n\n\n\n\n3172051003\nJAKARTA UTARA\nPADEMANGAN\nANCOL\n1776\n1691\n26\n0.0146\n0.0028\n\n\n3173041007\nJAKARTA BARAT\nTAMBORA\nANGKE\n1783\n1720\n29\n0.0163\n0.0030\n\n\n3175041005\nJAKARTA TIMUR\nKRAMAT JATI\nBALE KAMBANG\n2049\n1964\n31\n0.0151\n0.0027\n\n\n3175031003\nJAKARTA TIMUR\nJATINEGARA\nBALI MESTER\n827\n797\n13\n0.0157\n0.0043\n\n\n3175101006\nJAKARTA TIMUR\nCIPAYUNG\nBAMBU APUS\n2866\n2792\n27\n0.0094\n0.0018\n\n\n3174031002\nJAKARTA SELATAN\nMAMPANG PRAPATAN\nBANGKA\n1828\n1757\n26\n0.0142\n0.0028"
+  },
+  {
+    "objectID": "hands_on_exercise_4d.html#calculating-confidence-limits",
+    "href": "hands_on_exercise_4d.html#calculating-confidence-limits",
+    "title": "Hands-on Exercise 4d",
+    "section": "2.2 Calculating Confidence Limits",
+    "text": "2.2 Calculating Confidence Limits\n\n\nCode\nnumber.seq &lt;- seq(1, max(df$Positive), 1)\n\nnumber.ll95 &lt;- fit.mean - 1.96 * sqrt((fit.mean * (1 - fit.mean)) / number.seq)\nnumber.ul95 &lt;- fit.mean + 1.96 * sqrt((fit.mean * (1 - fit.mean)) / number.seq)\n\nnumber.ll999 &lt;- fit.mean - 3.29 * sqrt((fit.mean * (1 - fit.mean)) / number.seq)\nnumber.ul999 &lt;- fit.mean + 3.29 * sqrt((fit.mean * (1 - fit.mean)) / number.seq)\n\ndfCI &lt;- data.frame(\n  number.seq = number.seq,\n  number.ll95 = pmax(0, number.ll95),\n  number.ul95 = number.ul95,\n  number.ll999 = pmax(0, number.ll999),\n  number.ul999 = number.ul999,\n  fit.mean = fit.mean\n)\n\nknitr::kable(\n  head(dfCI),\n  format = \"html\",\n  digits = 4\n)\n\n\n\n\n\nnumber.seq\nnumber.ll95\nnumber.ul95\nnumber.ll999\nnumber.ul999\nfit.mean\n\n\n\n\n1\n0\n0.2530\n0\n0.4145\n0.015\n\n\n2\n0\n0.1833\n0\n0.2975\n0.015\n\n\n3\n0\n0.1524\n0\n0.2456\n0.015\n\n\n4\n0\n0.1340\n0\n0.2147\n0.015\n\n\n5\n0\n0.1214\n0\n0.1936\n0.015\n\n\n6\n0\n0.1121\n0\n0.1781\n0.015"
+  },
+  {
+    "objectID": "hands_on_exercise_4d.html#static-funnel-plot",
+    "href": "hands_on_exercise_4d.html#static-funnel-plot",
+    "title": "Hands-on Exercise 4d",
+    "section": "2.3 Static Funnel Plot",
+    "text": "2.3 Static Funnel Plot\n\n\nCode\np &lt;- ggplot(\n  df,\n  aes(\n    x = Positive,\n    y = rate\n  )\n) +\n  geom_point(\n    aes(\n      label = `Sub-district`,\n      text = paste(\n        \"Sub-district:\", `Sub-district`,\n        \"&lt;br&gt;City:\", City,\n        \"&lt;br&gt;District:\", District,\n        \"&lt;br&gt;Positive cases:\", Positive,\n        \"&lt;br&gt;Deaths:\", Death,\n        \"&lt;br&gt;Fatality rate:\", round(rate, 4)\n      )\n    ),\n    alpha = 0.4\n  ) +\n  geom_line(\n    data = dfCI,\n    aes(\n      x = number.seq,\n      y = number.ll95\n    ),\n    linewidth = 0.4,\n    colour = \"grey40\",\n    linetype = \"dashed\"\n  ) +\n  geom_line(\n    data = dfCI,\n    aes(\n      x = number.seq,\n      y = number.ul95\n    ),\n    linewidth = 0.4,\n    colour = \"grey40\",\n    linetype = \"dashed\"\n  ) +\n  geom_line(\n    data = dfCI,\n    aes(\n      x = number.seq,\n      y = number.ll999\n    ),\n    linewidth = 0.4,\n    colour = \"grey40\"\n  ) +\n  geom_line(\n    data = dfCI,\n    aes(\n      x = number.seq,\n      y = number.ul999\n    ),\n    linewidth = 0.4,\n    colour = \"grey40\"\n  ) +\n  geom_hline(\n    data = dfCI,\n    aes(yintercept = fit.mean),\n    linewidth = 0.4,\n    colour = \"grey40\"\n  ) +\n  coord_cartesian(\n    ylim = c(0, 0.05)\n  ) +\n  ggtitle(\"Cumulative Fatality Rate by Cumulative Number of COVID-19 Cases\") +\n  xlab(\"Cumulative Number of COVID-19 Positive Cases\") +\n  ylab(\"Cumulative Fatality Rate\") +\n  theme_light() +\n  theme(\n    plot.title = element_text(size = 12)\n  )\n\n\nWarning in geom_point(aes(label = `Sub-district`, text = paste(\"Sub-district:\",\n: Ignoring unknown aesthetics: label and text\n\n\nCode\np"
+  },
+  {
+    "objectID": "hands_on_exercise_4d.html#interactive-funnel-plot",
+    "href": "hands_on_exercise_4d.html#interactive-funnel-plot",
+    "title": "Hands-on Exercise 4d",
+    "section": "2.4 Interactive Funnel Plot",
+    "text": "2.4 Interactive Funnel Plot\n\n\nCode\nfp_ggplotly &lt;- ggplotly(\n  p,\n  tooltip = c(\"text\", \"x\", \"y\")\n)\n\nfp_ggplotly"
+  },
+  {
+    "objectID": "hands_on_exercise_4d.html#learning-reflection",
+    "href": "hands_on_exercise_4d.html#learning-reflection",
+    "title": "Hands-on Exercise 4d",
+    "section": "Learning Reflection",
+    "text": "Learning Reflection\nIn this exercise, I learned that funnel plots are useful when comparing rates across groups with different sample sizes. They help reduce misleading conclusions by showing expected statistical variation around the overall average."
   }
 ]
