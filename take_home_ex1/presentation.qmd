@@ -61,7 +61,7 @@ theme_set(theme_minimal(base_size = 14) +
 
 # Visual Analytics on a Motor Insurance Portfolio {.center background-color="#2E86AB"}
 
-Take-home Exercise 1 · Executive Summary Your Name · 24 May 2026
+Take-home Exercise 1 · Executive Summary Jedidiah Asaf · 24 May 2026
 
 ::: notes
 This 15-slide executive summary presents a visual-analytics study of a real Spanish motor insurance portfolio comprising 354,140 policy-years between 2022 and 2024. The work answers two questions the brief asks: how are numerical and categorical variables distributed, and which factors drive profitability and volatility? Every chart was produced in R using tidyverse for data wrangling and ggplot2 plus extensions for visualisation. The narrative emphasises insight over breadth: a small number of well-chosen charts replaces dozens of dashboard tiles. I will conclude with concrete pricing and segmentation recommendations supported by statistical tests. Throughout, I use the aggregated loss ratio rather than the mean of policy ratios because the latter is dominated by the 88% of policies that have no claim.
