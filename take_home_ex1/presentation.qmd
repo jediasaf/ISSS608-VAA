@@ -1,0 +1,356 @@
+---
+title: "Visual Analytics on a Motor Insurance Portfolio"
+subtitle: "Take-home Exercise 1 · Executive Summary"
+author: "Jedidiah Asaf"
+date: "2026-05-24"
+format:
+  revealjs:
+    theme: simple
+    transition: fade
+    slide-number: c/t
+    chalkboard: false
+    incremental: false
+    embed-resources: true
+    code-fold: true
+    code-overflow: wrap
+    width: 1280
+    height: 720
+    fig-width: 8.5
+    fig-height: 4.5
+    fig-align: center
+execute:
+  echo: false
+  warning: false
+  message: false
+  cache: true
+  freeze: auto
+---
+
+```{r setup}
+pacman::p_load(tidyverse, scales, ggridges, ggdist, patchwork, gt, ggstatsplot)
+
+mi_raw <- read_delim("data/motor_insurance.csv", delim = ";", show_col_types = FALSE)
+
+mi <- mi_raw |>
+  mutate(
+    year = factor(year),
+    policy_type = recode(policy_type, "CC"="Basic","TP"="Third-party","TPG"="Third-party+Glass",
+                         "COMP_N"="Comp. (basic)","COMP_E"="Comp. (extended)") |>
+      fct_relevel("Third-party","Third-party+Glass","Basic","Comp. (basic)","Comp. (extended)"),
+    business_type = recode(business_type, "NB"="New business", "P"="Renewal"),
+    payment_frequency = recode(payment_frequency, "A"="Annual","S"="Semi-annual","Q"="Quarterly") |>
+      fct_relevel("Annual","Semi-annual","Quarterly"),
+    bonus_score = recode(bonus_score, "G"="Good","N"="Neutral","B"="Bad") |>
+      fct_relevel("Good","Neutral","Bad"),
+    fuel_type = recode(fuel_type, "D"="Diesel","G"="Gasoline"),
+    circulation_area = recode(circulation_area, "U"="Urban","R"="Rural")
+  ) |>
+  mutate(
+    loss_ratio      = if_else(total_premium > 0,  total_incurred/total_premium,  NA_real_),
+    claim_severity  = if_else(total_claims  > 0,  total_incurred/total_claims,   NA_real_),
+    had_claim       = total_claims > 0,
+    driver_age_band = cut(driver_age, c(17,25,35,50,65,90), labels=c("18-25","26-35","36-50","51-65","66+")),
+    vehicle_age_band= cut(vehicle_age, c(-1,5,10,15,25,100), labels=c("0-5","6-10","11-15","16-25","26+"))
+  )
+
+theme_set(theme_minimal(base_size = 14) +
+            theme(plot.title = element_text(face="bold", size=16),
+                  plot.subtitle = element_text(colour="grey30"),
+                  panel.grid.minor = element_blank()))
+```
+
+# Visual Analytics on a Motor Insurance Portfolio {.center background-color="#2E86AB"}
+
+Take-home Exercise 1 · Executive Summary Your Name · 24 May 2026
+
+::: notes
+This 15-slide executive summary presents a visual-analytics study of a real Spanish motor insurance portfolio comprising 354,140 policy-years between 2022 and 2024. The work answers two questions the brief asks: how are numerical and categorical variables distributed, and which factors drive profitability and volatility? Every chart was produced in R using tidyverse for data wrangling and ggplot2 plus extensions for visualisation. The narrative emphasises insight over breadth: a small number of well-chosen charts replaces dozens of dashboard tiles. I will conclude with concrete pricing and segmentation recommendations supported by statistical tests. Throughout, I use the aggregated loss ratio rather than the mean of policy ratios because the latter is dominated by the 88% of policies that have no claim.
+:::
+
+## Contents {.smaller}
+
+1.  Context & objectives
+2.  Data overview and wrangling
+3.  Univariate analysis — numerical variables
+4.  Univariate analysis — portfolio mix
+5.  Profitability — loss ratio trend
+6.  Profitability — policy type
+7.  Profitability — behavioural drivers
+8.  Profitability — heatmap & brand
+9.  Volatility — severity distribution
+10. Volatility — loss concentration
+11. Statistical validation
+12. Synthesis & recommendations
+13. References
+
+::: notes
+The deck is organised in three movements. Slides 3 and 4 establish what the portfolio looks like through univariate exploration. Slides 5 through 8 isolate the profitability question, moving from the macro trend down to the segment that is driving the deterioration. Slides 9 and 10 then pivot to volatility, focusing on severity and loss concentration. Slide 11 brings statistical tests in to confirm what the visuals suggest. Slide 12 synthesises actionable findings. I have kept text minimal on every slide because each chart is designed to communicate its insight without needing narration, freeing the speaker notes for interpretation rather than description.
+:::
+
+## Context & objectives
+
+> "Insurers often carry underperforming portfolios where the root causes of poor profitability and high volatility are unknown."
+
+::: incremental
+- **Data**: open-access Spanish motor portfolio, 354,140 policy-years, 47 variables, 2022–2024
+- **Stack**: tidyverse + ggplot2 family (ggridges, ggdist, ggstatsplot, patchwork)
+- **Goal**: visually identify and statistically validate drivers of underperformance
+:::
+
+::: notes
+This study addresses a common problem in non-life insurance: aggregated KPIs mask the heterogeneous behaviour of sub-portfolios. The McKinsey quote on the slide frames the practical motivation. The dataset is a real motor-vehicle book published on Mendeley Data and is large enough to support segmentation analysis without running into power problems. I work entirely in R because the tidyverse offers a coherent grammar for wrangling and ggplot2 plus its extensions cover every visual pattern I need, from histograms and ridges to statistical annotation and concentration curves. The deliverables are this revealjs deck for stakeholders plus a longer reproducible HTML technical report that documents every transformation and design choice.
+:::
+
+## Data overview & wrangling
+
+```{r tab-overview}
+tibble::tibble(
+  Step = c("Read CSV (semicolon delimited)",
+           "Inspect missingness",
+           "Recode coded factors into descriptive labels",
+           "Order factors with natural rank",
+           "Derive loss_ratio, claim_severity, had_claim",
+           "Band driver_age and vehicle_age"),
+  Detail = c("readr::read_delim(delim = ';')",
+             "Only 4 fields with <2.5% NAs (fuel, value, ages)",
+             "policy_type, business_type, fuel_type, bonus_score, …",
+             "Payment frequency: Annual < Semi-annual < Quarterly",
+             "Guard divisions by zero with if_else",
+             "5 bands each, equal-business breakpoints")
+) |> gt() |> tab_options(table.font.size = 16)
+```
+
+::: notes
+The dataset arrives in European CSV format with semicolons and dots, which readr handles natively. Missingness is negligible. Coded categorical variables receive descriptive labels and natural ordering so charts are immediately readable. Three actuarial KPIs are derived: loss ratio at policy level for visualisation, claim severity restricted to claim-bearing policies, and a binary had_claim flag for chi-square tests. I deliberately avoid imputing missing fuel types because the omissions are not random and could bias profitability by segment. Driver and vehicle age are banded for two reasons: it stabilises the loss ratio in small cells and it produces a clean heatmap. All steps are reproducible from the source CSV; the technical report contains the full code.
+:::
+
+## Univariate — numerical variables
+
+```{r fig-num, fig.height=4.3}
+p1 <- ggplot(mi, aes(driver_age)) +
+  geom_histogram(binwidth = 2, fill = "#2E86AB", colour = "white") +
+  labs(title="Driver age", x=NULL, y=NULL)
+p2 <- ggplot(mi, aes(vehicle_age)) +
+  geom_histogram(binwidth = 2, fill = "#A23B72", colour = "white") +
+  labs(title="Vehicle age", x=NULL, y=NULL)
+p3 <- ggplot(mi, aes(total_premium)) +
+  geom_histogram(bins = 60, fill = "#F18F01", colour = "white") +
+  scale_x_continuous(labels = label_dollar(prefix="€",big.mark=",")) +
+  coord_cartesian(xlim=c(0,1500)) + labs(title="Premium (€)", x=NULL, y=NULL)
+p4 <- ggplot(filter(mi, total_incurred>0), aes(total_incurred)) +
+  geom_histogram(bins = 60, fill = "#C73E1D", colour = "white") +
+  scale_x_log10(labels = label_dollar(prefix="€",big.mark=",")) +
+  labs(title="Incurred where >0 (log scale)", x=NULL, y=NULL)
+(p1|p2)/(p3|p4)
+```
+
+::: notes
+The univariate panel reveals the shape of the loss problem. Driver age is symmetric and centred on the late forties, which is unremarkable. Vehicle age is bimodal: a younger fleet plus a tail of vehicles fifteen years or older, the latter being a known severity driver. Premium is right-skewed and bounded near zero. Most importantly, total incurred is zero for 88% of policies; among the 12% with claims it follows an approximately log-normal distribution. This bimodal zero-inflated shape is the entire reason the portfolio is volatile: the mean outcome depends on a small set of claim-bearing policies whose individual loss could be anywhere between fifty euros and a quarter of a million euros.
+:::
+
+## Univariate — portfolio mix
+
+```{r fig-mix, fig.height=4.3}
+ps <- function(var, title){
+  mi |> count(.data[[var]]) |> mutate(share=n/sum(n)) |>
+    ggplot(aes(reorder(.data[[var]], share), share)) +
+    geom_col(fill="#2E86AB") +
+    geom_text(aes(label=percent(share,0.1)), hjust=-0.1, size=3.5) +
+    scale_y_continuous(labels=percent, expand=expansion(c(0,.2))) +
+    coord_flip() + labs(title=title, x=NULL, y=NULL)
+}
+(ps("policy_type","Policy type") | ps("bonus_score","Bonus-malus")) /
+(ps("fuel_type","Fuel type") | ps("circulation_area","Circulation area"))
+```
+
+::: notes
+The portfolio composition exhibits two imbalances that constrain segmentation. First, the Basic product accounts for 58% of policies — diversification within the book is therefore limited and any pricing change affects most customers. Second, 96% of policyholders sit in the "Good" bonus-malus tier, which empties the bonus-malus system of discriminating power. Diesel still dominates the engine mix at 64%, reflecting the Spanish private-fleet composition. Urban and rural circulation are roughly balanced, supporting reliable comparison. These imbalances motivate the search for risk dimensions beyond bonus-malus that the rest of the deck explores: policy type, payment behaviour, vehicle attributes and driver age.
+:::
+
+## Profitability — loss ratio is deteriorating
+
+```{r fig-trend, fig.height=4.2}
+mi |> group_by(year) |>
+  summarise(lr=sum(total_incurred)/sum(total_premium)) |>
+  ggplot(aes(year, lr)) +
+  geom_col(fill="#2E86AB", width=0.55) +
+  geom_text(aes(label=percent(lr,0.1)), vjust=-0.5, size=5, fontface="bold") +
+  geom_hline(yintercept=0.70, linetype=2, colour="grey40") +
+  annotate("text", x=0.6, y=0.72, label="Indicative target 70%", hjust=0, size=4, colour="grey40") +
+  scale_y_continuous(labels=percent, limits=c(0,0.85)) +
+  labs(title="Portfolio loss ratio has deteriorated by 9 points in 2 years",
+       x=NULL, y=NULL)
+```
+
+::: notes
+The aggregated loss ratio rises from 65.6% in 2022 to 74.7% in 2024. Nine points in two underwriting years is material: loaded for typical Spanish motor expense ratios of 25-30%, the 2024 combined ratio is plausibly above 100%, meaning the portfolio loses money on each euro of premium earned. The deterioration is consistent with post-COVID claim frequency normalisation and Spanish parts inflation reported by sector associations. Whatever the macro driver, the visual signal is unambiguous: management needs to act on pricing and segmentation. The next slides decompose this aggregate to identify which sub-portfolios contribute most to the drift and therefore where corrective re-pricing will have the greatest effect.
+:::
+
+## Profitability — Comp. (basic) is the prime driver
+
+```{r fig-policy, fig.height=4.3}
+mi |> group_by(policy_type) |>
+  summarise(lr=sum(total_incurred)/sum(total_premium), n=n()) |>
+  ggplot(aes(reorder(policy_type, lr), lr)) +
+  geom_col(aes(fill=lr>0.75), width=0.6) +
+  geom_text(aes(label=paste0(percent(lr,0.1)," · n=",comma(n))), hjust=-0.05, size=4) +
+  scale_fill_manual(values=c("TRUE"="#C73E1D","FALSE"="#2E86AB"), guide="none") +
+  scale_y_continuous(labels=percent, expand=expansion(c(0,.25))) +
+  coord_flip() +
+  labs(title="Comp. (basic) — 93.9% LR — is the standout under-performer",
+       x=NULL, y=NULL)
+```
+
+::: notes
+The loss ratio decomposed by policy type isolates the issue. Comp. (basic) — the no-frills comprehensive product — runs at 93.9% over 16,000 policies, almost unprofitable on losses alone before any expenses are added. The richer Comp. (extended) product is contained at 73.8%. All three third-party variants sit comfortably below 70%. The clinical implication is that the deterioration in the overall loss ratio is not a portfolio-wide phenomenon; it is concentrated in one specific product line. That makes corrective action straightforward: re-price or re-design Comp. (basic). Notice also the value of the data label combining loss ratio and policy count — a chart like this is far more decision-useful than a percentage bar alone because it carries volume context for prioritisation.
+:::
+
+## Profitability — behavioural drivers
+
+```{r fig-driv, fig.height=4.4}
+pl <- function(var, title){
+  mi |> group_by(.data[[var]]) |>
+    summarise(lr=sum(total_incurred)/sum(total_premium), .groups="drop") |>
+    filter(!is.na(.data[[var]])) |>
+    ggplot(aes(reorder(.data[[var]], lr), lr)) +
+    geom_col(aes(fill=lr>0.75), width=0.55) +
+    geom_text(aes(label=percent(lr,0.1)), hjust=-0.1, size=3.5) +
+    scale_fill_manual(values=c("TRUE"="#C73E1D","FALSE"="#2E86AB"), guide="none") +
+    scale_y_continuous(labels=percent, expand=expansion(c(0,.2))) +
+    coord_flip() + labs(title=title, x=NULL, y=NULL)
+}
+(pl("fuel_type","Fuel") | pl("payment_frequency","Payment frequency")) /
+(pl("bonus_score","Bonus-malus") | pl("business_type","New / Renewal"))
+```
+
+::: notes
+Four behavioural signals each point to mis-priced risk. Diesel runs nine points higher than gasoline, consistent with higher mileage and heavier vehicles. Customers paying semi-annually or quarterly post loss ratios eight to thirteen points above annual payers — a textbook adverse-selection pattern, since customers anticipating losses prefer to pay in instalments. Bonus-malus rank order is correct but its narrow spread reflects the 96% concentration in "Good". Finally, the renewal book performs three points worse than new business, indicating that re-pricing has lagged emerging experience. Each of these is small individually but the combined effect explains a meaningful share of the 2024 deterioration. They are also the easiest levers to pull from a regulatory perspective: pricing factors that are already collected at quotation.
+:::
+
+## Profitability — heatmap & brand
+
+```{r fig-heatbrand, fig.height=4.6}
+heat <- mi |> filter(!is.na(driver_age_band), !is.na(vehicle_age_band)) |>
+  group_by(driver_age_band, vehicle_age_band) |>
+  summarise(lr=sum(total_incurred)/sum(total_premium), .groups="drop")
+
+p_h <- ggplot(heat, aes(vehicle_age_band, driver_age_band, fill=lr)) +
+  geom_tile(colour="white") +
+  geom_text(aes(label=percent(lr,0.1)), size=3.6) +
+  scale_fill_gradient2(low="#2E86AB", mid="#FFF3B0", high="#C73E1D",
+                       midpoint=0.70, labels=percent) +
+  labs(title="LR by driver age × vehicle age", x="Vehicle age band", y="Driver age band",
+       fill=NULL) +
+  theme(legend.position="bottom")
+
+brand <- mi |> group_by(vehicle_brand) |>
+  summarise(n=n(), lr=sum(total_incurred)/sum(total_premium)) |>
+  filter(n>=2000) |>
+  arrange(desc(lr)) |> slice_head(n=8)
+
+p_b <- ggplot(brand, aes(reorder(vehicle_brand, lr), lr)) +
+  geom_col(fill="#C73E1D", width=0.55) +
+  geom_text(aes(label=percent(lr,0.1)), hjust=-0.1, size=3.5) +
+  scale_y_continuous(labels=percent, expand=expansion(c(0,.25))) +
+  coord_flip() + labs(title="Worst brands (n ≥ 2,000)", x=NULL, y=NULL)
+
+p_h | p_b
+```
+
+::: notes
+The driver-age × vehicle-age heatmap surfaces a non-obvious interaction. The hottest cell — drivers aged 26 to 35 on vehicles aged 11 to 15 — exceeds 80% loss ratio, considerably worse than either margin would suggest. This is the kind of finding that one-dimensional segmentation misses entirely. On the right, ranking vehicle brands by loss ratio with a 2,000-policy minimum shows that Mitsubishi (99.8%), Mazda (93.9%) and Fiat (89.6%) materially under-perform. A volume filter is critical here: ranking by ratio alone would surface niche brands with one or two large claims. Both panels are tactical inputs: the heatmap informs a multi-factor rating cell adjustment, while the brand chart feeds vehicle-make pricing factors directly into the renewal book.
+:::
+
+## Volatility — claim severity is long-tailed
+
+```{r fig-sev, fig.height=4.3}
+mc <- filter(mi, had_claim)
+ggplot(mc, aes(claim_severity)) +
+  geom_histogram(bins=60, fill="#A23B72", colour="white") +
+  scale_x_log10(labels=label_dollar(prefix="€",big.mark=",")) +
+  geom_vline(xintercept=median(mc$claim_severity), linetype=2) +
+  annotate("text", x=median(mc$claim_severity)*1.15, y=3800,
+           label=paste0("Median €", format(round(median(mc$claim_severity)),big.mark=",")),
+           hjust=0, size=4) +
+  labs(title="Severity distribution — log-normal with extreme tail",
+       subtitle="Median €498 · P95 €2,429 · P99 €6,514 · Max €244,091",
+       x="Severity per claim (log scale)", y="Claims")
+```
+
+::: notes
+On a log scale the severity distribution is approximately symmetric, confirming a log-normal model is a sensible starting point for capital and reserving work. The median claim is modest at €498, but the 95th percentile reaches €2,429 and the 99th rises to €6,514. The maximum single-claim loss in the dataset is €244,091, which is larger than 1,000 typical claims combined. This is the analytical shape of motor insurance volatility: predictable frequency multiplied by an unpredictable tail. Two practical consequences follow. First, mean-based KPIs are misleading and dashboards should expose percentiles. Second, capital allocation and reinsurance pricing should be calibrated to the tail rather than to the central body of the distribution.
+:::
+
+## Volatility — losses are extraordinarily concentrated
+
+```{r fig-conc, fig.height=4.3}
+sorted <- mi |> arrange(desc(total_incurred)) |>
+  mutate(rank_pct=row_number()/n(),
+         cum_loss=cumsum(total_incurred)/sum(total_incurred))
+ggplot(sorted, aes(rank_pct, cum_loss)) +
+  geom_line(colour="#C73E1D", linewidth=1) +
+  geom_abline(slope=1, linetype=2, colour="grey50") +
+  geom_vline(xintercept=c(0.01,0.05), linetype=3) +
+  annotate("text", x=0.07, y=0.45,
+           label="Top 1% policies → 49.7% of losses\nTop 5% policies → 83.2% of losses",
+           hjust=0, size=4.2) +
+  scale_x_continuous(labels=percent, breaks=c(0.01,0.05,0.10,0.25,0.50,1)) +
+  scale_y_continuous(labels=percent) +
+  labs(title="1% of policies generate half of all losses",
+       x="Top X% of policies (ranked by incurred)", y="Cumulative share of losses")
+```
+
+::: notes
+This Lorenz-style concentration curve is the most informative single visualisation of volatility. The diagonal dotted line represents perfect equality of losses across policies — what the portfolio would look like if every policy contributed equally to total losses. The actual curve is dramatically convex: the top 1% of policies, fewer than 3,600 cases, account for half of all losses. The top 5% accounts for 83%. The practical implication is profound: identifying and accurately pricing this thin tail is more important than refining pricing on the 95% of policies that contribute the remaining 17%. It also explains why year-on-year loss ratios bounce around: a handful of large claims falling into one calendar year can move the headline by several points.
+:::
+
+## Statistical validation
+
+```{r tab-chi}
+chi_test <- function(var){
+  tab <- table(mi[[var]], mi$had_claim)
+  ct <- chisq.test(tab)
+  tibble(Variable=var, `Chi-sq`=round(ct$statistic,1),
+         df=ct$parameter,
+         `p-value`=format.pval(ct$p.value, digits=2, eps=1e-300),
+         `Cramer's V`=round(sqrt(ct$statistic / (sum(tab)*(min(dim(tab))-1))),3))
+}
+map_dfr(c("policy_type","fuel_type","circulation_area",
+          "bonus_score","payment_frequency","business_type"), chi_test) |>
+  gt() |> tab_options(table.font.size = 18) |>
+  tab_header(title = "Chi-square: claim occurrence vs. categorical drivers")
+```
+
+Kruskal-Wallis on log severity by policy type: H = 1,241, p \< 10⁻²⁶⁰.
+
+::: notes
+Visual differences alone can mislead — particularly with hundreds of thousands of rows where almost any difference is "significant". I therefore combine chi-square tests with Cramer's V to capture effect size. Every categorical driver tested rejects the null of independence at p well below 0.001. Policy type and fuel type have the largest effect sizes, consistent with the bar-chart magnitudes seen earlier. The Kruskal-Wallis test applied to log-transformed severity across policy types confirms the central observation of slide 8: comprehensive policies do not just have more claims, they have systematically larger ones. These statistical results validate the prioritisation in the recommendations: re-price comprehensive products and use fuel type and payment frequency as rating factors.
+:::
+
+## Synthesis & recommendations
+
+::: incremental
+- **Re-price Comp. (basic)** — single biggest profitability lever (93.9% LR)
+- **Add fuel type as a rating factor** — 9-point gap, statistically robust
+- **Differentiate by payment frequency** — adverse selection signal worth \~12 points
+- **Widen the bonus-malus scale** — 96% in "Good" is too coarse
+- **Build a tail-aware monitoring dashboard** — track P95 and P99 of severity, not just the mean
+:::
+
+::: notes
+The findings translate into five concrete actions of decreasing implementation complexity. Re-pricing Comp. (basic) attacks the largest contributor and is the highest priority. Adding fuel type as a rating factor is straightforward because the data is already collected and the effect size is large. Payment frequency differentiation requires a regulatory check in some jurisdictions but is well established in Spain. Widening the bonus-malus scale is a multi-year exercise but unlocks the largest long-term segmentation gain. Finally, the tail-aware dashboard is a small build with outsized impact: most existing reporting tracks the mean and the loss ratio, which hide volatility. Tracking the 95th and 99th severity percentiles weekly would have flagged the 2024 deterioration much sooner than the annual loss ratio did.
+:::
+
+## References {.smaller}
+
+- Quesada-Molina, J.J. et al. — *Spanish motor insurance portfolio dataset*. Mendeley Data.
+- Wickham, H. — *ggplot2: Elegant Graphics for Data Analysis* (3rd ed.).
+- Patil, I. (2021). *ggstatsplot: Based plots with statistical details*. JOSS, 6(61), 3167.
+- Wilke, C.O. — *Fundamentals of Data Visualization*.
+- McKinsey & Co. — *Advanced analytics: unlocking new frontiers in P&C insurance*.
+
+Thank you · Questions welcome
+
+::: notes
+The full reproducible technical report — with every data wrangling step, design rationale and the complete code — is published alongside this deck on the coursework site. The bibliography lists the principal works that informed the methodology, particularly Wilke for visualisation principles and Patil for the statistical-annotation extensions used on the severity slide. The dataset citation is the Mendeley Data record published by the original authors. I am happy to take any questions on the analytical choices, the statistical tests, or the recommended actions.
+:::

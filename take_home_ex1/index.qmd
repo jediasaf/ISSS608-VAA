@@ -1,0 +1,27 @@
+---
+title: "Take-home Exercise 1"
+subtitle: "Visual Analytics on a Motor Insurance Portfolio"
+format:
+  html:
+    toc: false
+    theme: cosmo
+---
+
+A visual analytics study of a Spanish motor insurance portfolio (354,140 policy-years, 2022–2024).
+
+## Deliverables
+
+- 📊 [**Executive Summary (revealjs)**](presentation.html) — 15-slide presentation with speaker notes
+- 📄 [**Technical Report (HTML)**](report.html) — fully reproducible analysis with code
+
+## TL;DR
+
+| Finding | Evidence |
+|----|----|
+| Portfolio LR deteriorated **65.6% → 74.7%** in 2 years | Aggregated LR by underwriting year |
+| **Comp. (basic) at 93.9% LR** is the prime under-performer | LR by policy type |
+| **Diesel runs 9 pp above gasoline** | LR by fuel type, χ² p \< 0.001 |
+| **Top 5% of policies = 83% of losses** | Loss concentration curve |
+| Semi-annual / quarterly payers signal **adverse selection** | LR by payment frequency |
+
+Built with `tidyverse` for wrangling and `ggplot2` + extensions (`ggridges`, `ggdist`, `ggstatsplot`, `patchwork`) for visual analytics.

@@ -8,3 +8,9 @@
 
 /.quarto/
 **/*.quarto_ipynb
+
+# Take-home Ex 1 - large files
+take_home_ex1/data/*.csv
+take_home_ex1/_freeze/
+**/*_cache/
+**/*_files/

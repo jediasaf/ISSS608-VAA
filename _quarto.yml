@@ -23,6 +23,15 @@ website:
           - text: "Hands-on Exercise 4d: Funnel Plots for Fair Comparisons"
             href: hands_on_exercise_4d.qmd
 
+      - text: "Take-home Exercises"
+        menu:
+          - text: "Take-home Exercise 1: Motor Insurance Visual Analytics"
+            href: take_home_ex1/index.qmd
+          - text: "  ↳ Technical Report"
+            href: take_home_ex1/report.qmd
+          - text: "  ↳ Executive Summary (slides)"
+            href: take_home_ex1/presentation.qmd
+
       - href: about.qmd
         text: About
 

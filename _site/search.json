@@ -1,618 +1,240 @@
 [
   {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "ISSS608-VAA",
+    "objectID": "take_home_ex1/report.html",
+    "href": "take_home_ex1/report.html",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
     "section": "",
-    "text": "Hi, I’m Jedidiah Asaf T.\nThis website contains my hands-on exercises for ISSS608 Visual Analytics and Applications.\n\n\n\n\nProgramming Interactive Data Visualisation with R\nOpen Exercise\n\n\n\nProgramming Animated Statistical Graphics with R\nOpen Exercise\n\n\n\nVisualising Distribution\nOpen Exercise\n\n\n\nVisual Statistical Analysis\nOpen Exercise\n\n\n\nVisualising Uncertainty\nOpen Exercise\n\n\n\nFunnel Plots for Fair Comparisons\nOpen Exercise"
+    "text": "Insurers routinely carry underperforming sub-portfolios whose drivers of poor profitability and high volatility are not immediately visible from aggregated KPIs. This study applies a visual analytics workflow to a real-world motor vehicle insurance portfolio from a Spanish non-life insurer (354,140 policy-years across 2022–2024) to:\n\nProfile the distributions of numerical and categorical variables (univariate);\nIdentify and statistically validate factors that influence profitability (loss ratio) and volatility (severity dispersion, loss concentration) (bivariate).\n\nThe analysis is implemented entirely with the tidyverse family for data wrangling and ggplot2 plus extensions (ggridges, ggdist, patchwork, ggstatsplot, scales) for visual analytics."
   },
   {
-    "objectID": "index.html#hands-on-exercises",
-    "href": "index.html#hands-on-exercises",
-    "title": "ISSS608-VAA",
+    "objectID": "take_home_ex1/report.html#import",
+    "href": "take_home_ex1/report.html#import",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "4.1 Import",
+    "text": "4.1 Import\nThe source file uses a semicolon (;) field separator and dot decimal mark. readr::read_delim() handles this without locale tweaks.\n\n\nShow the code\nmi_raw &lt;- read_delim(\n  \"data/motor_insurance.csv\",\n  delim = \";\",\n  show_col_types = FALSE\n)\n\ndim(mi_raw)\n\n\n[1] 354140     47"
+  },
+  {
+    "objectID": "take_home_ex1/report.html#quality-checks",
+    "href": "take_home_ex1/report.html#quality-checks",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "4.2 Quality checks",
+    "text": "4.2 Quality checks\n\n\nShow the code\nmi_raw |&gt;\n  summarise(across(everything(), ~ sum(is.na(.)))) |&gt;\n  pivot_longer(everything(), names_to = \"variable\", values_to = \"n_missing\") |&gt;\n  filter(n_missing &gt; 0) |&gt;\n  arrange(desc(n_missing)) |&gt;\n  gt() |&gt;\n  tab_header(title = \"Variables with missing values\")\n\n\n\n\n\n\n\n\nVariables with missing values\n\n\nvariable\nn_missing\n\n\n\n\nfuel_type\n1287\n\n\nvehicle_value\n513\n\n\nvehicle_age\n2\n\n\nage_driving_licence\n2\n\n\n\n\n\n\n\nOnly four variables have missing values, all at very low prevalence (fuel_type 0.36%, vehicle_value 0.14%, vehicle_age / age_driving_licence 2 records each). They are retained but flagged."
+  },
+  {
+    "objectID": "take_home_ex1/report.html#type-conversion-re-coding",
+    "href": "take_home_ex1/report.html#type-conversion-re-coding",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "4.3 Type conversion & re-coding",
+    "text": "4.3 Type conversion & re-coding\nTo support meaningful visual encoding, character codes are mapped to descriptive labels and converted to ordered factors where natural ordering exists (e.g. payment frequency).\n\n\nShow the code\nmi &lt;- mi_raw |&gt;\n  mutate(\n    year             = factor(year),\n    policy_type      = recode(policy_type,\n                              \"CC\"=\"Basic\",\n                              \"TP\"=\"Third-party\",\n                              \"TPG\"=\"Third-party+Glass\",\n                              \"COMP_N\"=\"Comp. (basic)\",\n                              \"COMP_E\"=\"Comp. (extended)\") |&gt;\n                       fct_relevel(\"Third-party\",\"Third-party+Glass\",\"Basic\",\n                                   \"Comp. (basic)\",\"Comp. (extended)\"),\n    policy_status    = recode(policy_status, \"A\"=\"Active\", \"C\"=\"Cancelled\"),\n    business_type    = recode(business_type, \"NB\"=\"New business\", \"P\"=\"Renewal\"),\n    payment_frequency= recode(payment_frequency,\n                              \"A\"=\"Annual\",\"S\"=\"Semi-annual\",\"Q\"=\"Quarterly\") |&gt;\n                       fct_relevel(\"Annual\",\"Semi-annual\",\"Quarterly\"),\n    bonus_score      = recode(bonus_score, \"G\"=\"Good\",\"N\"=\"Neutral\",\"B\"=\"Bad\") |&gt;\n                       fct_relevel(\"Good\",\"Neutral\",\"Bad\"),\n    fuel_type        = recode(fuel_type, \"D\"=\"Diesel\",\"G\"=\"Gasoline\"),\n    municipality_type= recode(municipality_type,\n                              \"C\"=\"Capital\",\"I\"=\"Inland\",\"IS\"=\"Island\"),\n    circulation_area = recode(circulation_area, \"U\"=\"Urban\",\"R\"=\"Rural\")\n  )"
+  },
+  {
+    "objectID": "take_home_ex1/report.html#derive-analytical-measures",
+    "href": "take_home_ex1/report.html#derive-analytical-measures",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "4.4 Derive analytical measures",
+    "text": "4.4 Derive analytical measures\nThree actuarial KPIs are derived. The denominator guards prevent divisions by zero.\n\n\nShow the code\nmi &lt;- mi |&gt;\n  mutate(\n    loss_ratio      = if_else(total_premium  &gt; 0, total_incurred / total_premium,  NA_real_),\n    claim_frequency = if_else(total_exposure &gt; 0, total_claims    / total_exposure, NA_real_),\n    claim_severity  = if_else(total_claims   &gt; 0, total_incurred  / total_claims,   NA_real_),\n    had_claim       = total_claims &gt; 0,\n    driver_age_band = cut(driver_age,\n                          breaks = c(17,25,35,50,65,90),\n                          labels = c(\"18-25\",\"26-35\",\"36-50\",\"51-65\",\"66+\")),\n    vehicle_age_band= cut(vehicle_age,\n                          breaks = c(-1,5,10,15,25,100),\n                          labels = c(\"0-5\",\"6-10\",\"11-15\",\"16-25\",\"26+\"))\n  )\n\nskimr::skim(mi |&gt; select(loss_ratio, claim_frequency, claim_severity))\n\n\n\nData summary\n\n\nName\nselect(mi, loss_ratio, cl…\n\n\nNumber of rows\n354140\n\n\nNumber of columns\n3\n\n\n_______________________\n\n\n\nColumn type frequency:\n\n\n\nnumeric\n3\n\n\n________________________\n\n\n\nGroup variables\nNone\n\n\n\nVariable type: numeric\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmean\nsd\np0\np25\np50\np75\np100\nhist\n\n\n\n\nloss_ratio\n49\n1.00\n0.79\n22.55\n0\n0.0\n0.00\n0\n11348.86\n▇▁▁▁▁\n\n\nclaim_frequency\n49\n1.00\n0.32\n1.99\n0\n0.0\n0.00\n0\n486.67\n▇▁▁▁▁\n\n\nclaim_severity\n303333\n0.14\n848.03\n2927.33\n0\n119.7\n498.35\n1012\n244091.25\n▇▁▁▁▁\n\n\n\n\n\n\n\n\n\n\n\nNote\n\n\n\nWhy aggregated loss ratio rather than the policy mean? The aggregated (portfolio) loss ratio is \\(\\sum I / \\sum P\\), which is the actuarially correct measure because losses and premiums must be summed before being divided. The arithmetic mean of policy-level ratios is heavily distorted by 88% of policies having loss_ratio == 0."
+  },
+  {
+    "objectID": "take_home_ex1/report.html#numerical-variables",
+    "href": "take_home_ex1/report.html#numerical-variables",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "5.1 Numerical variables",
+    "text": "5.1 Numerical variables\n\n\nShow the code\np1 &lt;- ggplot(mi, aes(driver_age)) +\n  geom_histogram(binwidth = 2, fill = \"#2E86AB\", colour = \"white\") +\n  labs(title = \"Driver age\", x = NULL, y = \"Policies\")\n\np2 &lt;- ggplot(mi, aes(vehicle_age)) +\n  geom_histogram(binwidth = 2, fill = \"#A23B72\", colour = \"white\") +\n  labs(title = \"Vehicle age (years)\", x = NULL, y = NULL)\n\np3 &lt;- ggplot(mi, aes(total_premium)) +\n  geom_histogram(bins = 60, fill = \"#F18F01\", colour = \"white\") +\n  scale_x_continuous(labels = label_dollar(prefix = \"€\", big.mark=\",\")) +\n  coord_cartesian(xlim = c(0, 1500)) +\n  labs(title = \"Total premium (€)\", x = NULL, y = \"Policies\")\n\np4 &lt;- ggplot(mi |&gt; filter(total_incurred &gt; 0),\n             aes(total_incurred)) +\n  geom_histogram(bins = 60, fill = \"#C73E1D\", colour = \"white\") +\n  scale_x_log10(labels = label_dollar(prefix = \"€\", big.mark=\",\")) +\n  labs(title = \"Total incurred — claims-bearing policies (log scale)\",\n       x = NULL, y = NULL)\n\n(p1 | p2) / (p3 | p4)\n\n\n\n\n\n\n\n\nFigure 1: Distributions of key numerical variables. Premium, vehicle value and incurred are heavily right-skewed; driver age is roughly symmetric.\n\n\n\n\n\nThe premium distribution is bounded near zero with a long tail; 88% of policies have zero incurred (no claim in the period), and among the 12% with claims the log-scaled distribution is approximately log-normal — typical of motor portfolios. This shape is the root cause of the portfolio’s volatility: the loss outcome is dominated by a thin right tail."
+  },
+  {
+    "objectID": "take_home_ex1/report.html#categorical-variables-portfolio-composition",
+    "href": "take_home_ex1/report.html#categorical-variables-portfolio-composition",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "5.2 Categorical variables — portfolio composition",
+    "text": "5.2 Categorical variables — portfolio composition\n\n\nShow the code\nplot_share &lt;- function(var, title){\n  mi |&gt;\n    count(.data[[var]]) |&gt;\n    mutate(share = n/sum(n)) |&gt;\n    ggplot(aes(reorder(.data[[var]], share), share)) +\n    geom_col(fill = \"#2E86AB\") +\n    geom_text(aes(label = percent(share, 0.1)), hjust = -0.1, size = 3) +\n    scale_y_continuous(labels = percent, expand = expansion(c(0,0.15))) +\n    coord_flip() +\n    labs(title = title, x = NULL, y = NULL)\n}\n\n(plot_share(\"policy_type\",\"Policy type\") |\n   plot_share(\"fuel_type\",\"Fuel type\")) /\n(plot_share(\"circulation_area\",\"Circulation area\") |\n   plot_share(\"bonus_score\",\"Bonus-malus score\"))\n\n\n\n\n\n\n\n\nFigure 2: Portfolio mix by key categorical variables.\n\n\n\n\n\nThe portfolio is dominated by Basic (CC) policies (58%) and the bonus-malus distribution is extremely skewed toward Good drivers (96%). This imbalance limits the discriminating power of bonus-malus segmentation and motivates the search for additional risk factors."
+  },
+  {
+    "objectID": "take_home_ex1/report.html#trend-by-underwriting-year",
+    "href": "take_home_ex1/report.html#trend-by-underwriting-year",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "6.1 Trend by underwriting year",
+    "text": "6.1 Trend by underwriting year\n\n\nShow the code\nlr_year &lt;- mi |&gt;\n  group_by(year) |&gt;\n  summarise(lr = sum(total_incurred)/sum(total_premium),\n            premium_m = sum(total_premium)/1e6,\n            .groups = \"drop\")\n\nggplot(lr_year, aes(year, lr)) +\n  geom_col(fill = \"#2E86AB\", width = 0.55) +\n  geom_text(aes(label = percent(lr, 0.1)), vjust = -0.5, size = 4) +\n  geom_hline(yintercept = 0.70, linetype = 2, colour = \"grey40\") +\n  annotate(\"text\", x = 1, y = 0.72, label = \"Indicative target 70%\",\n           hjust = 0, size = 3.2, colour = \"grey40\") +\n  scale_y_continuous(labels = percent, limits = c(0, 0.85)) +\n  labs(title = \"Portfolio loss ratio is deteriorating\",\n       subtitle = \"Aggregated loss ratio = Σ incurred ÷ Σ premium\",\n       x = NULL, y = NULL)\n\n\n\n\n\n\n\n\nFigure 3: Aggregated loss ratio by underwriting year — material deterioration in 2024.\n\n\n\n\n\nThe portfolio LR moves from 65.6% (2022) to 74.7% (2024) — a 9-point deterioration in two years that is the central finding of the study. Combined with typical expense ratios of 25–30%, the 2024 combined ratio is plausibly above 100%."
+  },
+  {
+    "objectID": "take_home_ex1/report.html#loss-ratio-by-policy-type",
+    "href": "take_home_ex1/report.html#loss-ratio-by-policy-type",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "6.2 Loss ratio by policy type",
+    "text": "6.2 Loss ratio by policy type\n\n\nShow the code\nlr_pol &lt;- mi |&gt;\n  group_by(policy_type) |&gt;\n  summarise(n = n(),\n            premium = sum(total_premium),\n            lr = sum(total_incurred)/sum(total_premium),\n            .groups = \"drop\")\n\nggplot(lr_pol, aes(reorder(policy_type, lr), lr)) +\n  geom_col(aes(fill = lr &gt; 0.75), width = 0.6) +\n  geom_text(aes(label = paste0(percent(lr, 0.1),\n                               \" · n=\", scales::comma(n))),\n            hjust = -0.05, size = 3.2) +\n  scale_fill_manual(values = c(\"TRUE\"=\"#C73E1D\",\"FALSE\"=\"#2E86AB\"), guide = \"none\") +\n  scale_y_continuous(labels = percent, expand = expansion(c(0, .25))) +\n  coord_flip() +\n  labs(title = \"Comp. (basic) policies are the worst performers\",\n       subtitle = \"Loss ratio by policy type\",\n       x = NULL, y = NULL)\n\n\n\n\n\n\n\n\nFigure 4: Loss ratio by policy type. COMP_N (basic comprehensive) is the standout under-performer.\n\n\n\n\n\nComp. (basic) (93.9% LR over only 16k policies) is the dominant drag on portfolio profitability. The two third-party variants and the largest segment (Basic) all sit comfortably below 70%."
+  },
+  {
+    "objectID": "take_home_ex1/report.html#loss-ratio-by-risk-and-behavioural-drivers",
+    "href": "take_home_ex1/report.html#loss-ratio-by-risk-and-behavioural-drivers",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "6.3 Loss ratio by risk and behavioural drivers",
+    "text": "6.3 Loss ratio by risk and behavioural drivers\n\n\nShow the code\nplot_lr &lt;- function(var, title){\n  mi |&gt;\n    group_by(.data[[var]]) |&gt;\n    summarise(lr = sum(total_incurred)/sum(total_premium),\n              n  = n(), .groups = \"drop\") |&gt;\n    filter(!is.na(.data[[var]])) |&gt;\n    ggplot(aes(reorder(.data[[var]], lr), lr)) +\n    geom_col(aes(fill = lr &gt; 0.75), width = 0.55) +\n    geom_text(aes(label = percent(lr, 0.1)), hjust = -0.1, size = 3) +\n    scale_fill_manual(values=c(\"TRUE\"=\"#C73E1D\",\"FALSE\"=\"#2E86AB\"), guide=\"none\") +\n    scale_y_continuous(labels = percent, expand = expansion(c(0,.2))) +\n    coord_flip() + labs(title = title, x = NULL, y = NULL)\n}\n\n(plot_lr(\"fuel_type\",\"Fuel type\") |\n   plot_lr(\"circulation_area\",\"Circulation area\")) /\n(plot_lr(\"bonus_score\",\"Bonus-malus\") |\n   plot_lr(\"payment_frequency\",\"Payment frequency\")) /\n(plot_lr(\"business_type\",\"New / Renewal\") |\n   plot_lr(\"driver_age_band\",\"Driver age band\"))\n\n\n\n\n\n\n\n\nFigure 5: Loss ratio across the principal segmentation dimensions.\n\n\n\n\n\nFour behavioural signals stand out:\n\nDiesel drivers post 73% LR versus 64% for gasoline — a 9-point gap that aligns with higher mileage and commercial use of diesel vehicles in Spain.\nSemi-annual / quarterly payers show 76–81% LR versus 68% for annual payers — a textbook indication of adverse selection: customers anticipating claims often opt for instalments.\nThe bonus-malus signal is correctly ordered (Good 70% &lt; Bad 79% &lt; Neutral 81%) but its discriminating power is limited because 96% of policyholders are graded “Good”.\nThe renewal book is slightly worse (72%) than new business (69%) — a sign that re-pricing has not kept pace with deteriorating experience on the retained book."
+  },
+  {
+    "objectID": "take_home_ex1/report.html#vehicle-brand-top-under-performers",
+    "href": "take_home_ex1/report.html#vehicle-brand-top-under-performers",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "6.4 Vehicle brand — top under-performers",
+    "text": "6.4 Vehicle brand — top under-performers\n\n\nShow the code\nbrand_lr &lt;- mi |&gt;\n  group_by(vehicle_brand) |&gt;\n  summarise(n = n(),\n            premium = sum(total_premium),\n            lr = sum(total_incurred)/sum(total_premium),\n            .groups = \"drop\") |&gt;\n  filter(n &gt;= 2000)\n\nbind_rows(slice_max(brand_lr, lr, n = 7) |&gt; mutate(grp = \"Worst\"),\n          slice_min(brand_lr, lr, n = 7) |&gt; mutate(grp = \"Best\")) |&gt;\n  ggplot(aes(reorder(vehicle_brand, lr), lr, fill = grp)) +\n  geom_col() +\n  geom_text(aes(label = percent(lr, 0.1)), hjust = -0.1, size = 3) +\n  scale_fill_manual(values = c(\"Worst\"=\"#C73E1D\",\"Best\"=\"#2E86AB\")) +\n  scale_y_continuous(labels = percent, expand = expansion(c(0,.2))) +\n  coord_flip() +\n  labs(title = \"Mitsubishi, Mazda and Fiat materially under-perform\",\n       subtitle = \"Loss ratio by vehicle brand (n ≥ 2,000)\",\n       x = NULL, y = NULL, fill = NULL)\n\n\n\n\n\n\n\n\nFigure 6: Brands with at least 2,000 policy-years, ranked by loss ratio."
+  },
+  {
+    "objectID": "take_home_ex1/report.html#claim-severity-distribution",
+    "href": "take_home_ex1/report.html#claim-severity-distribution",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "7.1 Claim severity distribution",
+    "text": "7.1 Claim severity distribution\n\n\nShow the code\nmi_claims &lt;- mi |&gt; \n  filter(had_claim, !is.na(claim_severity), claim_severity &gt; 0, is.finite(claim_severity))\n\nggplot(mi_claims, aes(claim_severity)) +\n  geom_histogram(bins = 60, fill = \"#A23B72\", colour = \"white\") +\n  scale_x_log10(labels = label_dollar(prefix = \"€\", big.mark=\",\")) +\n  geom_vline(xintercept = median(mi_claims$claim_severity), linetype = 2) +\n  annotate(\"text\",\n           x = median(mi_claims$claim_severity)*1.15,\n           y = 4000,\n           label = paste0(\"Median €\",\n                          format(round(median(mi_claims$claim_severity)),\n                                 big.mark=\",\")),\n           hjust = 0, size = 3.3) +\n  labs(title = \"Claim severity distribution (log scale)\",\n       subtitle = \"Median €498 · 95th percentile €2,429 · max €244,091\",\n       x = \"Severity per claim\", y = \"Claims\")\n\n\n\n\n\n\n\n\nFigure 7: Claim severity is approximately log-normal with an extreme right tail.\n\n\n\n\n\nThe median claim is €498 but the 99th percentile reaches €6,514 and the maximum approaches a quarter of a million euros. This thin tail is the principal source of year-on-year volatility."
+  },
+  {
+    "objectID": "take_home_ex1/report.html#loss-concentration",
+    "href": "take_home_ex1/report.html#loss-concentration",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "7.2 Loss concentration",
+    "text": "7.2 Loss concentration\n\n\nShow the code\nsorted &lt;- mi |&gt;\n  arrange(desc(total_incurred)) |&gt;\n  mutate(rank_pct = row_number()/n(),\n         cum_loss_pct = cumsum(total_incurred)/sum(total_incurred))\n\nggplot(sorted, aes(rank_pct, cum_loss_pct)) +\n  geom_line(colour = \"#C73E1D\", linewidth = 0.9) +\n  geom_abline(slope = 1, intercept = 0, linetype = 2, colour = \"grey50\") +\n  geom_vline(xintercept = c(0.01, 0.05), linetype = 3) +\n  annotate(\"text\", x = 0.05, y = 0.50,\n           label = \"Top 1%  → 49.7% of losses\\nTop 5%  → 83.2% of losses\",\n           hjust = 0, size = 3.5) +\n  scale_x_continuous(labels = percent) +\n  scale_y_continuous(labels = percent) +\n  labs(title = \"Losses are extraordinarily concentrated\",\n       subtitle = \"Cumulative loss share vs. policy share (ranked by incurred desc.)\",\n       x = \"Top X% of policies (by incurred)\", y = \"Cumulative share of total losses\")\n\n\n\n\n\n\n\n\nFigure 8: Loss concentration curve. The vertical lines mark the 1% and 5% policy thresholds.\n\n\n\n\n\nHalf of all losses are produced by just 1% of policies and 83% by 5%. Volatility management is therefore largely about identifying and pricing this thin tail."
+  },
+  {
+    "objectID": "take_home_ex1/report.html#severity-by-segment",
+    "href": "take_home_ex1/report.html#severity-by-segment",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "7.3 Severity by segment",
+    "text": "7.3 Severity by segment\n\n\nShow the code\np_a &lt;- ggplot(mi_claims, aes(x = claim_severity, y = policy_type, fill = policy_type)) +\n  geom_density_ridges(alpha = 0.7, scale = 1.1, colour = \"white\") +\n  scale_x_log10(labels = label_dollar(prefix = \"€\", big.mark = \",\")) +\n  scale_fill_brewer(palette = \"Set2\", guide = \"none\") +\n  labs(title = \"By policy type\", x = \"Severity (log)\", y = NULL)\n\np_b &lt;- ggplot(mi_claims, aes(x = claim_severity, y = circulation_area, fill = circulation_area)) +\n  geom_density_ridges(alpha = 0.7, scale = 1.1, colour = \"white\") +\n  scale_x_log10(labels = label_dollar(prefix = \"€\", big.mark = \",\")) +\n  scale_fill_brewer(palette = \"Set2\", guide = \"none\") +\n  labs(title = \"By circulation area\", x = \"Severity (log)\", y = NULL)\n\np_a / p_b\n\n\n\n\n\n\n\n\nFigure 9: Claim severity by policy type and circulation area (ridge plots, log scale)."
+  },
+  {
+    "objectID": "take_home_ex1/report.html#frequency-severity-heatmap-by-driver-and-vehicle-age",
+    "href": "take_home_ex1/report.html#frequency-severity-heatmap-by-driver-and-vehicle-age",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "7.4 Frequency × severity heatmap by driver and vehicle age",
+    "text": "7.4 Frequency × severity heatmap by driver and vehicle age\n\n\nShow the code\nheat &lt;- mi |&gt;\n  filter(!is.na(driver_age_band), !is.na(vehicle_age_band)) |&gt;\n  group_by(driver_age_band, vehicle_age_band) |&gt;\n  summarise(lr = sum(total_incurred)/sum(total_premium),\n            n  = n(), .groups = \"drop\")\n\nggplot(heat, aes(vehicle_age_band, driver_age_band, fill = lr)) +\n  geom_tile(colour = \"white\") +\n  geom_text(aes(label = percent(lr, 0.1)), size = 3.3) +\n  scale_fill_gradient2(low = \"#2E86AB\", mid = \"#FFF3B0\", high = \"#C73E1D\",\n                       midpoint = 0.70, labels = percent) +\n  labs(title = \"Loss ratio by driver age × vehicle age\",\n       x = \"Vehicle age band\", y = \"Driver age band\", fill = \"Loss ratio\")\n\n\n\n\n\n\n\n\nFigure 10: Aggregated loss ratio by combinations of driver age and vehicle age.\n\n\n\n\n\nThe interaction is informative: 26–35-year-old drivers on 11–15-year-old vehicles produce the worst combined cell, exceeding 80% LR."
+  },
+  {
+    "objectID": "take_home_ex1/report.html#independence-of-having-a-claim-from-segmentation-variables",
+    "href": "take_home_ex1/report.html#independence-of-having-a-claim-from-segmentation-variables",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "8.1 Independence of having-a-claim from segmentation variables",
+    "text": "8.1 Independence of having-a-claim from segmentation variables\n\n\nShow the code\nchi_test &lt;- function(var){\n  tab &lt;- table(mi[[var]], mi$had_claim)\n  ct &lt;- chisq.test(tab)\n  tibble(variable = var,\n         chi2 = round(ct$statistic, 1),\n         df = ct$parameter,\n         p_value = format.pval(ct$p.value, digits = 2, eps = 1e-300),\n         cramers_v = round(sqrt(ct$statistic / (sum(tab) * (min(dim(tab))-1))), 3))\n}\n\nmap_dfr(c(\"policy_type\",\"fuel_type\",\"circulation_area\",\n          \"bonus_score\",\"payment_frequency\",\"business_type\"), chi_test) |&gt;\n  gt() |&gt;\n  tab_header(title = \"Chi-square: claim occurrence vs. categorical drivers\")\n\n\n\n\n\n\n\n\nChi-square: claim occurrence vs. categorical drivers\n\n\nvariable\nchi2\ndf\np_value\ncramers_v\n\n\n\n\npolicy_type\n6638.4\n4\n&lt;1e-300\n0.137\n\n\nfuel_type\n817.1\n1\n1e-179\n0.048\n\n\ncirculation_area\n225.9\n1\n4.7e-51\n0.025\n\n\nbonus_score\n297.2\n2\n2.9e-65\n0.029\n\n\npayment_frequency\n463.9\n2\n1.8e-101\n0.036\n\n\nbusiness_type\n2317.9\n1\n&lt;1e-300\n0.081\n\n\n\n\n\n\n\nAll factors reject the null of independence at p &lt; 0.001. Effect sizes (Cramer’s V) are small individually but consistent."
+  },
+  {
+    "objectID": "take_home_ex1/report.html#severity-differences-across-policy-types",
+    "href": "take_home_ex1/report.html#severity-differences-across-policy-types",
+    "title": "Take-home Exercise 1: Visual Analytics for Data Discovery",
+    "section": "8.2 Severity differences across policy types",
+    "text": "8.2 Severity differences across policy types\n\n\nShow the code\nggbetweenstats(\n  data = mi_claims |&gt; mutate(log_sev = log(claim_severity)),\n  x = policy_type, y = log_sev,\n  type = \"nonparametric\",\n  pairwise.display = \"significant\",\n  results.subtitle = TRUE,\n  centrality.label.args = list(size = 3)\n) +\n  labs(y = \"log(claim severity)\", title = \"Severity differs significantly across policy types\")\n\n\n\n\n\n\n\n\nFigure 11: Built-in statistical annotation via ggstatsplot — log severity by policy type.\n\n\n\n\n\nThe Kruskal-Wallis test confirms severity distributions differ across policy types (H ≈ 1,241; p ≪ 0.001), with Comp. (basic) showing markedly heavier losses than third-party variants."
+  },
+  {
+    "objectID": "take_home_ex1/presentation.html#contents",
+    "href": "take_home_ex1/presentation.html#contents",
+    "title": "Visual Analytics on a Motor Insurance Portfolio",
+    "section": "Contents",
+    "text": "Contents\n\nContext & objectives\nData overview and wrangling\nUnivariate analysis — numerical variables\nUnivariate analysis — portfolio mix\nProfitability — loss ratio trend\nProfitability — policy type\nProfitability — behavioural drivers\nProfitability — heatmap & brand\nVolatility — severity distribution\nVolatility — loss concentration\nStatistical validation\nSynthesis & recommendations\nReferences\n\n\nThe deck is organised in three movements. Slides 3 and 4 establish what the portfolio looks like through univariate exploration. Slides 5 through 8 isolate the profitability question, moving from the macro trend down to the segment that is driving the deterioration. Slides 9 and 10 then pivot to volatility, focusing on severity and loss concentration. Slide 11 brings statistical tests in to confirm what the visuals suggest. Slide 12 synthesises actionable findings. I have kept text minimal on every slide because each chart is designed to communicate its insight without needing narration, freeing the speaker notes for interpretation rather than description."
+  },
+  {
+    "objectID": "take_home_ex1/presentation.html#context-objectives",
+    "href": "take_home_ex1/presentation.html#context-objectives",
+    "title": "Visual Analytics on a Motor Insurance Portfolio",
+    "section": "Context & objectives",
+    "text": "Context & objectives\n\n“Insurers often carry underperforming portfolios where the root causes of poor profitability and high volatility are unknown.”\n\n\nData: open-access Spanish motor portfolio, 354,140 policy-years, 47 variables, 2022–2024\nStack: tidyverse + ggplot2 family (ggridges, ggdist, ggstatsplot, patchwork)\nGoal: visually identify and statistically validate drivers of underperformance\n\n\nThis study addresses a common problem in non-life insurance: aggregated KPIs mask the heterogeneous behaviour of sub-portfolios. The McKinsey quote on the slide frames the practical motivation. The dataset is a real motor-vehicle book published on Mendeley Data and is large enough to support segmentation analysis without running into power problems. I work entirely in R because the tidyverse offers a coherent grammar for wrangling and ggplot2 plus its extensions cover every visual pattern I need, from histograms and ridges to statistical annotation and concentration curves. The deliverables are this revealjs deck for stakeholders plus a longer reproducible HTML technical report that documents every transformation and design choice."
+  },
+  {
+    "objectID": "take_home_ex1/presentation.html#data-overview-wrangling",
+    "href": "take_home_ex1/presentation.html#data-overview-wrangling",
+    "title": "Visual Analytics on a Motor Insurance Portfolio",
+    "section": "Data overview & wrangling",
+    "text": "Data overview & wrangling\n\n\n\n\n\n\n\n\nStep\nDetail\n\n\n\n\nRead CSV (semicolon delimited)\nreadr::read_delim(delim = ';')\n\n\nInspect missingness\nOnly 4 fields with &lt;2.5% NAs (fuel, value, ages)\n\n\nRecode coded factors into descriptive labels\npolicy_type, business_type, fuel_type, bonus_score, …\n\n\nOrder factors with natural rank\nPayment frequency: Annual &lt; Semi-annual &lt; Quarterly\n\n\nDerive loss_ratio, claim_severity, had_claim\nGuard divisions by zero with if_else\n\n\nBand driver_age and vehicle_age\n5 bands each, equal-business breakpoints\n\n\n\n\n\n\n\n\nThe dataset arrives in European CSV format with semicolons and dots, which readr handles natively. Missingness is negligible. Coded categorical variables receive descriptive labels and natural ordering so charts are immediately readable. Three actuarial KPIs are derived: loss ratio at policy level for visualisation, claim severity restricted to claim-bearing policies, and a binary had_claim flag for chi-square tests. I deliberately avoid imputing missing fuel types because the omissions are not random and could bias profitability by segment. Driver and vehicle age are banded for two reasons: it stabilises the loss ratio in small cells and it produces a clean heatmap. All steps are reproducible from the source CSV; the technical report contains the full code."
+  },
+  {
+    "objectID": "take_home_ex1/presentation.html#univariate-numerical-variables",
+    "href": "take_home_ex1/presentation.html#univariate-numerical-variables",
+    "title": "Visual Analytics on a Motor Insurance Portfolio",
+    "section": "Univariate — numerical variables",
+    "text": "Univariate — numerical variables\n\n\nFigure 1\n\nThe univariate panel reveals the shape of the loss problem. Driver age is symmetric and centred on the late forties, which is unremarkable. Vehicle age is bimodal: a younger fleet plus a tail of vehicles fifteen years or older, the latter being a known severity driver. Premium is right-skewed and bounded near zero. Most importantly, total incurred is zero for 88% of policies; among the 12% with claims it follows an approximately log-normal distribution. This bimodal zero-inflated shape is the entire reason the portfolio is volatile: the mean outcome depends on a small set of claim-bearing policies whose individual loss could be anywhere between fifty euros and a quarter of a million euros."
+  },
+  {
+    "objectID": "take_home_ex1/presentation.html#univariate-portfolio-mix",
+    "href": "take_home_ex1/presentation.html#univariate-portfolio-mix",
+    "title": "Visual Analytics on a Motor Insurance Portfolio",
+    "section": "Univariate — portfolio mix",
+    "text": "Univariate — portfolio mix\n\n\nFigure 2\n\nThe portfolio composition exhibits two imbalances that constrain segmentation. First, the Basic product accounts for 58% of policies — diversification within the book is therefore limited and any pricing change affects most customers. Second, 96% of policyholders sit in the “Good” bonus-malus tier, which empties the bonus-malus system of discriminating power. Diesel still dominates the engine mix at 64%, reflecting the Spanish private-fleet composition. Urban and rural circulation are roughly balanced, supporting reliable comparison. These imbalances motivate the search for risk dimensions beyond bonus-malus that the rest of the deck explores: policy type, payment behaviour, vehicle attributes and driver age."
+  },
+  {
+    "objectID": "take_home_ex1/presentation.html#profitability-loss-ratio-is-deteriorating",
+    "href": "take_home_ex1/presentation.html#profitability-loss-ratio-is-deteriorating",
+    "title": "Visual Analytics on a Motor Insurance Portfolio",
+    "section": "Profitability — loss ratio is deteriorating",
+    "text": "Profitability — loss ratio is deteriorating\n\n\nFigure 3\n\nThe aggregated loss ratio rises from 65.6% in 2022 to 74.7% in 2024. Nine points in two underwriting years is material: loaded for typical Spanish motor expense ratios of 25-30%, the 2024 combined ratio is plausibly above 100%, meaning the portfolio loses money on each euro of premium earned. The deterioration is consistent with post-COVID claim frequency normalisation and Spanish parts inflation reported by sector associations. Whatever the macro driver, the visual signal is unambiguous: management needs to act on pricing and segmentation. The next slides decompose this aggregate to identify which sub-portfolios contribute most to the drift and therefore where corrective re-pricing will have the greatest effect."
+  },
+  {
+    "objectID": "take_home_ex1/presentation.html#profitability-comp.-basic-is-the-prime-driver",
+    "href": "take_home_ex1/presentation.html#profitability-comp.-basic-is-the-prime-driver",
+    "title": "Visual Analytics on a Motor Insurance Portfolio",
+    "section": "Profitability — Comp. (basic) is the prime driver",
+    "text": "Profitability — Comp. (basic) is the prime driver\n\n\nFigure 4\n\nThe loss ratio decomposed by policy type isolates the issue. Comp. (basic) — the no-frills comprehensive product — runs at 93.9% over 16,000 policies, almost unprofitable on losses alone before any expenses are added. The richer Comp. (extended) product is contained at 73.8%. All three third-party variants sit comfortably below 70%. The clinical implication is that the deterioration in the overall loss ratio is not a portfolio-wide phenomenon; it is concentrated in one specific product line. That makes corrective action straightforward: re-price or re-design Comp. (basic). Notice also the value of the data label combining loss ratio and policy count — a chart like this is far more decision-useful than a percentage bar alone because it carries volume context for prioritisation."
+  },
+  {
+    "objectID": "take_home_ex1/presentation.html#profitability-behavioural-drivers",
+    "href": "take_home_ex1/presentation.html#profitability-behavioural-drivers",
+    "title": "Visual Analytics on a Motor Insurance Portfolio",
+    "section": "Profitability — behavioural drivers",
+    "text": "Profitability — behavioural drivers\n\n\nFigure 5\n\nFour behavioural signals each point to mis-priced risk. Diesel runs nine points higher than gasoline, consistent with higher mileage and heavier vehicles. Customers paying semi-annually or quarterly post loss ratios eight to thirteen points above annual payers — a textbook adverse-selection pattern, since customers anticipating losses prefer to pay in instalments. Bonus-malus rank order is correct but its narrow spread reflects the 96% concentration in “Good”. Finally, the renewal book performs three points worse than new business, indicating that re-pricing has lagged emerging experience. Each of these is small individually but the combined effect explains a meaningful share of the 2024 deterioration. They are also the easiest levers to pull from a regulatory perspective: pricing factors that are already collected at quotation."
+  },
+  {
+    "objectID": "take_home_ex1/presentation.html#profitability-heatmap-brand",
+    "href": "take_home_ex1/presentation.html#profitability-heatmap-brand",
+    "title": "Visual Analytics on a Motor Insurance Portfolio",
+    "section": "Profitability — heatmap & brand",
+    "text": "Profitability — heatmap & brand\n\n\nFigure 6\n\nThe driver-age × vehicle-age heatmap surfaces a non-obvious interaction. The hottest cell — drivers aged 26 to 35 on vehicles aged 11 to 15 — exceeds 80% loss ratio, considerably worse than either margin would suggest. This is the kind of finding that one-dimensional segmentation misses entirely. On the right, ranking vehicle brands by loss ratio with a 2,000-policy minimum shows that Mitsubishi (99.8%), Mazda (93.9%) and Fiat (89.6%) materially under-perform. A volume filter is critical here: ranking by ratio alone would surface niche brands with one or two large claims. Both panels are tactical inputs: the heatmap informs a multi-factor rating cell adjustment, while the brand chart feeds vehicle-make pricing factors directly into the renewal book."
+  },
+  {
+    "objectID": "take_home_ex1/presentation.html#volatility-claim-severity-is-long-tailed",
+    "href": "take_home_ex1/presentation.html#volatility-claim-severity-is-long-tailed",
+    "title": "Visual Analytics on a Motor Insurance Portfolio",
+    "section": "Volatility — claim severity is long-tailed",
+    "text": "Volatility — claim severity is long-tailed\n\n\nFigure 7\n\nOn a log scale the severity distribution is approximately symmetric, confirming a log-normal model is a sensible starting point for capital and reserving work. The median claim is modest at €498, but the 95th percentile reaches €2,429 and the 99th rises to €6,514. The maximum single-claim loss in the dataset is €244,091, which is larger than 1,000 typical claims combined. This is the analytical shape of motor insurance volatility: predictable frequency multiplied by an unpredictable tail. Two practical consequences follow. First, mean-based KPIs are misleading and dashboards should expose percentiles. Second, capital allocation and reinsurance pricing should be calibrated to the tail rather than to the central body of the distribution."
+  },
+  {
+    "objectID": "take_home_ex1/presentation.html#volatility-losses-are-extraordinarily-concentrated",
+    "href": "take_home_ex1/presentation.html#volatility-losses-are-extraordinarily-concentrated",
+    "title": "Visual Analytics on a Motor Insurance Portfolio",
+    "section": "Volatility — losses are extraordinarily concentrated",
+    "text": "Volatility — losses are extraordinarily concentrated\n\n\nFigure 8\n\nThis Lorenz-style concentration curve is the most informative single visualisation of volatility. The diagonal dotted line represents perfect equality of losses across policies — what the portfolio would look like if every policy contributed equally to total losses. The actual curve is dramatically convex: the top 1% of policies, fewer than 3,600 cases, account for half of all losses. The top 5% accounts for 83%. The practical implication is profound: identifying and accurately pricing this thin tail is more important than refining pricing on the 95% of policies that contribute the remaining 17%. It also explains why year-on-year loss ratios bounce around: a handful of large claims falling into one calendar year can move the headline by several points."
+  },
+  {
+    "objectID": "take_home_ex1/presentation.html#statistical-validation",
+    "href": "take_home_ex1/presentation.html#statistical-validation",
+    "title": "Visual Analytics on a Motor Insurance Portfolio",
+    "section": "Statistical validation",
+    "text": "Statistical validation\n\n\n\n\n\n\n\n\nChi-square: claim occurrence vs. categorical drivers\n\n\nVariable\nChi-sq\ndf\np-value\nCramer's V\n\n\n\n\npolicy_type\n6638.4\n4\n&lt;1e-300\n0.137\n\n\nfuel_type\n817.1\n1\n1e-179\n0.048\n\n\ncirculation_area\n225.9\n1\n4.7e-51\n0.025\n\n\nbonus_score\n297.2\n2\n2.9e-65\n0.029\n\n\npayment_frequency\n463.9\n2\n1.8e-101\n0.036\n\n\nbusiness_type\n2317.9\n1\n&lt;1e-300\n0.081\n\n\n\n\n\n\n\nKruskal-Wallis on log severity by policy type: H = 1,241, p &lt; 10⁻²⁶⁰.\n\nVisual differences alone can mislead — particularly with hundreds of thousands of rows where almost any difference is “significant”. I therefore combine chi-square tests with Cramer’s V to capture effect size. Every categorical driver tested rejects the null of independence at p well below 0.001. Policy type and fuel type have the largest effect sizes, consistent with the bar-chart magnitudes seen earlier. The Kruskal-Wallis test applied to log-transformed severity across policy types confirms the central observation of slide 8: comprehensive policies do not just have more claims, they have systematically larger ones. These statistical results validate the prioritisation in the recommendations: re-price comprehensive products and use fuel type and payment frequency as rating factors."
+  },
+  {
+    "objectID": "take_home_ex1/presentation.html#synthesis-recommendations",
+    "href": "take_home_ex1/presentation.html#synthesis-recommendations",
+    "title": "Visual Analytics on a Motor Insurance Portfolio",
+    "section": "Synthesis & recommendations",
+    "text": "Synthesis & recommendations\n\nRe-price Comp. (basic) — single biggest profitability lever (93.9% LR)\nAdd fuel type as a rating factor — 9-point gap, statistically robust\nDifferentiate by payment frequency — adverse selection signal worth ~12 points\nWiden the bonus-malus scale — 96% in “Good” is too coarse\nBuild a tail-aware monitoring dashboard — track P95 and P99 of severity, not just the mean\n\n\nThe findings translate into five concrete actions of decreasing implementation complexity. Re-pricing Comp. (basic) attacks the largest contributor and is the highest priority. Adding fuel type as a rating factor is straightforward because the data is already collected and the effect size is large. Payment frequency differentiation requires a regulatory check in some jurisdictions but is well established in Spain. Widening the bonus-malus scale is a multi-year exercise but unlocks the largest long-term segmentation gain. Finally, the tail-aware dashboard is a small build with outsized impact: most existing reporting tracks the mean and the loss ratio, which hide volatility. Tracking the 95th and 99th severity percentiles weekly would have flagged the 2024 deterioration much sooner than the annual loss ratio did."
+  },
+  {
+    "objectID": "take_home_ex1/presentation.html#references",
+    "href": "take_home_ex1/presentation.html#references",
+    "title": "Visual Analytics on a Motor Insurance Portfolio",
+    "section": "References",
+    "text": "References\n\nQuesada-Molina, J.J. et al. — Spanish motor insurance portfolio dataset. Mendeley Data.\nWickham, H. — ggplot2: Elegant Graphics for Data Analysis (3rd ed.).\nPatil, I. (2021). ggstatsplot: Based plots with statistical details. JOSS, 6(61), 3167.\nWilke, C.O. — Fundamentals of Data Visualization.\nMcKinsey & Co. — Advanced analytics: unlocking new frontiers in P&C insurance.\n\nThank you · Questions welcome\n\nThe full reproducible technical report — with every data wrangling step, design rationale and the complete code — is published alongside this deck on the coursework site. The bibliography lists the principal works that informed the methodology, particularly Wilke for visualisation principles and Patil for the statistical-annotation extensions used on the severity slide. The dataset citation is the Mendeley Data record published by the original authors. I am happy to take any questions on the analytical choices, the statistical tests, or the recommended actions."
+  },
+  {
+    "objectID": "take_home_ex1/index.html",
+    "href": "take_home_ex1/index.html",
+    "title": "Take-home Exercise 1",
     "section": "",
-    "text": "Programming Interactive Data Visualisation with R\nOpen Exercise\n\n\n\nProgramming Animated Statistical Graphics with R\nOpen Exercise\n\n\n\nVisualising Distribution\nOpen Exercise\n\n\n\nVisual Statistical Analysis\nOpen Exercise\n\n\n\nVisualising Uncertainty\nOpen Exercise\n\n\n\nFunnel Plots for Fair Comparisons\nOpen Exercise"
+    "text": "A visual analytics study of a Spanish motor insurance portfolio (354,140 policy-years, 2022–2024)."
   },
   {
-    "objectID": "hands_on_exercise_4c.html",
-    "href": "hands_on_exercise_4c.html",
-    "title": "Hands-on Exercise 4c",
-    "section": "",
-    "text": "This hands-on exercise focuses on visualising uncertainty using error bars, confidence intervals, interactive charts, and uncertainty visualisation methods."
+    "objectID": "take_home_ex1/index.html#deliverables",
+    "href": "take_home_ex1/index.html#deliverables",
+    "title": "Take-home Exercise 1",
+    "section": "Deliverables",
+    "text": "Deliverables\n\n📊 Executive Summary (revealjs) — 15-slide presentation with speaker notes\n📄 Technical Report (HTML) — fully reproducible analysis with code"
   },
   {
-    "objectID": "hands_on_exercise_4c.html#overview",
-    "href": "hands_on_exercise_4c.html#overview",
-    "title": "Hands-on Exercise 4c",
-    "section": "",
-    "text": "This hands-on exercise focuses on visualising uncertainty using error bars, confidence intervals, interactive charts, and uncertainty visualisation methods."
-  },
-  {
-    "objectID": "hands_on_exercise_4c.html#setup",
-    "href": "hands_on_exercise_4c.html#setup",
-    "title": "Hands-on Exercise 4c",
-    "section": "Setup",
-    "text": "Setup\n\n\nCode\nif (!require(pacman)) install.packages(\"pacman\")\n\npacman::p_load(\n  plotly,\n  crosstalk,\n  DT,\n  ggdist,\n  ggridges,\n  colorspace,\n  gganimate,\n  tidyverse,\n  knitr\n)\n\nexam &lt;- read_csv(\"Exam_data.csv\")"
-  },
-  {
-    "objectID": "hands_on_exercise_4c.html#data-preview",
-    "href": "hands_on_exercise_4c.html#data-preview",
-    "title": "Hands-on Exercise 4c",
-    "section": "Data Preview",
-    "text": "Data Preview\n\n\nCode\nglimpse(exam)\n\n\nRows: 322\nColumns: 7\n$ ID      &lt;chr&gt; \"Student321\", \"Student305\", \"Student289\", \"Student227\", \"Stude…\n$ CLASS   &lt;chr&gt; \"3I\", \"3I\", \"3H\", \"3F\", \"3I\", \"3I\", \"3I\", \"3I\", \"3I\", \"3H\", \"3…\n$ GENDER  &lt;chr&gt; \"Male\", \"Female\", \"Male\", \"Male\", \"Male\", \"Female\", \"Male\", \"M…\n$ RACE    &lt;chr&gt; \"Malay\", \"Malay\", \"Chinese\", \"Chinese\", \"Malay\", \"Malay\", \"Chi…\n$ ENGLISH &lt;dbl&gt; 21, 24, 26, 27, 27, 31, 31, 31, 33, 34, 34, 36, 36, 36, 37, 38…\n$ MATHS   &lt;dbl&gt; 9, 22, 16, 77, 11, 16, 21, 18, 19, 49, 39, 35, 23, 36, 49, 30,…\n$ SCIENCE &lt;dbl&gt; 15, 16, 16, 31, 25, 16, 25, 27, 15, 37, 42, 22, 32, 36, 35, 45…"
-  },
-  {
-    "objectID": "hands_on_exercise_4c.html#standard-error-bars",
-    "href": "hands_on_exercise_4c.html#standard-error-bars",
-    "title": "Hands-on Exercise 4c",
-    "section": "2.1 Standard Error Bars",
-    "text": "2.1 Standard Error Bars\n\n\nCode\nggplot(my_sum) +\n  geom_errorbar(\n    aes(\n      x = RACE,\n      ymin = mean - se,\n      ymax = mean + se\n    ),\n    width = 0.2,\n    colour = \"black\",\n    alpha = 0.9,\n    linewidth = 0.5\n  ) +\n  geom_point(\n    aes(\n      x = RACE,\n      y = mean\n    ),\n    stat = \"identity\",\n    color = \"red\",\n    size = 1.5,\n    alpha = 1\n  ) +\n  labs(\n    title = \"Standard Error of Mean Maths Score by Race\",\n    x = \"Race\",\n    y = \"Mean Maths score\"\n  ) +\n  theme_minimal()"
-  },
-  {
-    "objectID": "hands_on_exercise_4c.html#confidence-interval",
-    "href": "hands_on_exercise_4c.html#confidence-interval",
-    "title": "Hands-on Exercise 4c",
-    "section": "2.2 95% Confidence Interval",
-    "text": "2.2 95% Confidence Interval\n\n\nCode\nggplot(my_sum) +\n  geom_errorbar(\n    aes(\n      x = reorder(RACE, -mean),\n      ymin = mean - 1.96 * se,\n      ymax = mean + 1.96 * se\n    ),\n    width = 0.2,\n    colour = \"black\",\n    alpha = 0.9,\n    linewidth = 0.5\n  ) +\n  geom_point(\n    aes(\n      x = reorder(RACE, -mean),\n      y = mean\n    ),\n    stat = \"identity\",\n    color = \"red\",\n    size = 1.5,\n    alpha = 1\n  ) +\n  labs(\n    title = \"95% Confidence Interval of Mean Maths Score by Race\",\n    x = \"Race\",\n    y = \"Mean Maths score\"\n  ) +\n  theme_minimal()"
-  },
-  {
-    "objectID": "hands_on_exercise_4c.html#confidence-interval-with-linked-table",
-    "href": "hands_on_exercise_4c.html#confidence-interval-with-linked-table",
-    "title": "Hands-on Exercise 4c",
-    "section": "3.1 99% Confidence Interval with Linked Table",
-    "text": "3.1 99% Confidence Interval with Linked Table\n\n\nCode\nshared_df &lt;- SharedData$new(my_sum)\n\np &lt;- ggplot(shared_df) +\n  geom_errorbar(\n    aes(\n      x = reorder(RACE, -mean),\n      ymin = mean - 2.58 * se,\n      ymax = mean + 2.58 * se\n    ),\n    width = 0.2,\n    colour = \"black\",\n    alpha = 0.9,\n    linewidth = 0.5\n  ) +\n  geom_point(\n    aes(\n      x = RACE,\n      y = mean,\n      text = paste(\n        \"Race:\", RACE,\n        \"&lt;br&gt;N:\", n,\n        \"&lt;br&gt;Average score:\", round(mean, 2),\n        \"&lt;br&gt;99% CI: [\",\n        round(mean - 2.58 * se, 2),\n        \",\",\n        round(mean + 2.58 * se, 2),\n        \"]\"\n      )\n    ),\n    stat = \"identity\",\n    color = \"red\",\n    size = 1.5,\n    alpha = 1\n  ) +\n  xlab(\"Race\") +\n  ylab(\"Average Maths Score\") +\n  ggtitle(\"99% Confidence Interval of Average Maths Scores by Race\") +\n  theme_minimal() +\n  theme(\n    axis.text.x = element_text(\n      angle = 45,\n      vjust = 0.5,\n      hjust = 1\n    )\n  )\n\n\nWarning in geom_point(aes(x = RACE, y = mean, text = paste(\"Race:\", RACE, :\nIgnoring unknown aesthetics: text\n\n\nCode\nbscols(\n  widths = c(6, 6),\n  ggplotly(p, tooltip = \"text\"),\n  DT::datatable(\n    shared_df,\n    rownames = FALSE,\n    class = \"compact\",\n    width = \"100%\",\n    options = list(\n      pageLength = 10,\n      scrollX = TRUE\n    )\n  ) %&gt;%\n    formatRound(\n      columns = c(\"mean\", \"sd\", \"se\"),\n      digits = 2\n    )\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_4c.html#mean-point-interval-plot",
-    "href": "hands_on_exercise_4c.html#mean-point-interval-plot",
-    "title": "Hands-on Exercise 4c",
-    "section": "4.1 Mean Point Interval Plot",
-    "text": "4.1 Mean Point Interval Plot\n\n\nCode\nexam %&gt;%\n  ggplot(\n    aes(\n      x = RACE,\n      y = MATHS\n    )\n  ) +\n  stat_pointinterval() +\n  labs(\n    title = \"Visualising Confidence Intervals of Mean Maths Score\",\n    subtitle = \"Mean point + multiple interval plot\",\n    x = \"Race\",\n    y = \"Maths score\"\n  ) +\n  theme_minimal()"
-  },
-  {
-    "objectID": "hands_on_exercise_4c.html#median-point-interval-plot",
-    "href": "hands_on_exercise_4c.html#median-point-interval-plot",
-    "title": "Hands-on Exercise 4c",
-    "section": "4.2 Median Point Interval Plot",
-    "text": "4.2 Median Point Interval Plot\n\n\nCode\nexam %&gt;%\n  ggplot(\n    aes(\n      x = RACE,\n      y = MATHS\n    )\n  ) +\n  stat_pointinterval(\n    .width = 0.95,\n    .point = median,\n    .interval = qi\n  ) +\n  labs(\n    title = \"Visualising Confidence Intervals of Median Maths Score\",\n    subtitle = \"Median point + interval plot\",\n    x = \"Race\",\n    y = \"Maths score\"\n  ) +\n  theme_minimal()\n\n\nWarning in layer_slabinterval(data = data, mapping = mapping, stat =\nStatPointinterval, : Ignoring unknown parameters: `.point` and `.interval`"
-  },
-  {
-    "objectID": "hands_on_exercise_4c.html#multiple-interval-plot",
-    "href": "hands_on_exercise_4c.html#multiple-interval-plot",
-    "title": "Hands-on Exercise 4c",
-    "section": "4.3 Multiple Interval Plot",
-    "text": "4.3 Multiple Interval Plot\n\n\nCode\nexam %&gt;%\n  ggplot(\n    aes(\n      x = RACE,\n      y = MATHS\n    )\n  ) +\n  stat_pointinterval(\n    .width = c(0.95, 0.99),\n    show.legend = TRUE\n  ) +\n  labs(\n    title = \"Visualising 95% and 99% Intervals of Mean Maths Score\",\n    subtitle = \"Mean point + multiple interval plot\",\n    x = \"Race\",\n    y = \"Maths score\"\n  ) +\n  theme_minimal()"
-  },
-  {
-    "objectID": "hands_on_exercise_4c.html#gradient-interval-plot",
-    "href": "hands_on_exercise_4c.html#gradient-interval-plot",
-    "title": "Hands-on Exercise 4c",
-    "section": "4.4 Gradient Interval Plot",
-    "text": "4.4 Gradient Interval Plot\n\n\nCode\nexam %&gt;%\n  ggplot(\n    aes(\n      x = RACE,\n      y = MATHS\n    )\n  ) +\n  stat_gradientinterval(\n    fill = \"skyblue\",\n    show.legend = TRUE\n  ) +\n  labs(\n    title = \"Visualising Confidence Intervals of Mean Maths Score\",\n    subtitle = \"Gradient + interval plot\",\n    x = \"Race\",\n    y = \"Maths score\"\n  ) +\n  theme_minimal()\n\n\nWarning in draw_slabs(self, ...): `fill_type = \"gradient\"` is not supported by the current graphics device.\nℹ Falling back to `fill_type = \"segments\"`.\n→ If you believe your current graphics device does support `fill_type =\n  \"gradient\"` but auto-detection failed, try setting `fill_type = \"gradient\"`\n  explicitly. If this causes the gradient to display correctly, then this\n  warning is likely a false positive caused by the graphics device failing to\n  properly report its support for the `\"LinearGradient\"` pattern via\n  `grDevices::dev.capabilities()`. Consider reporting a bug to the author of\n  the graphics device.\nℹ For more information, see the documentation for `fill_type` in\n  `ggdist::geom_slabinterval()` or the documentation for\n  `ggplot2::check_device()`.\nCaused by warning in `draw_slabs()`:\n! Unable to check the capabilities of the png device."
-  },
-  {
-    "objectID": "hands_on_exercise_4c.html#learning-reflection",
-    "href": "hands_on_exercise_4c.html#learning-reflection",
-    "title": "Hands-on Exercise 4c",
-    "section": "Learning Reflection",
-    "text": "Learning Reflection\nIn this exercise, I learned that uncertainty should not be hidden in visual analytics. Error bars, confidence intervals, and interval plots help communicate how reliable or uncertain a point estimate is. Interactive visualisation also helps users inspect the uncertainty values more clearly."
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#overview-1",
-    "href": "hands_on_exercise_4a.html#overview-1",
-    "title": "Hands-on Exercise 4a",
-    "section": "Overview",
-    "text": "Overview\nThis hands-on exercise focuses on visualising distribution using ridgeline plots and raincloud plots."
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#setup",
-    "href": "hands_on_exercise_4a.html#setup",
-    "title": "Hands-on Exercise 4a",
-    "section": "Setup",
-    "text": "Setup\n\n\nCode\nif (!require(pacman)) install.packages(\"pacman\")\n\npacman::p_load(\n  ggdist,\n  ggridges,\n  ggthemes,\n  colorspace,\n  tidyverse\n)\n\nexam &lt;- read_csv(\"Exam_data.csv\")"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#data-preview",
-    "href": "hands_on_exercise_4a.html#data-preview",
-    "title": "Hands-on Exercise 4a",
-    "section": "Data Preview",
-    "text": "Data Preview\n\n\nCode\nglimpse(exam)\n\n\nRows: 322\nColumns: 7\n$ ID      &lt;chr&gt; \"Student321\", \"Student305\", \"Student289\", \"Student227\", \"Stude…\n$ CLASS   &lt;chr&gt; \"3I\", \"3I\", \"3H\", \"3F\", \"3I\", \"3I\", \"3I\", \"3I\", \"3I\", \"3H\", \"3…\n$ GENDER  &lt;chr&gt; \"Male\", \"Female\", \"Male\", \"Male\", \"Male\", \"Female\", \"Male\", \"M…\n$ RACE    &lt;chr&gt; \"Malay\", \"Malay\", \"Chinese\", \"Chinese\", \"Malay\", \"Malay\", \"Chi…\n$ ENGLISH &lt;dbl&gt; 21, 24, 26, 27, 27, 31, 31, 31, 33, 34, 34, 36, 36, 36, 37, 38…\n$ MATHS   &lt;dbl&gt; 9, 22, 16, 77, 11, 16, 21, 18, 19, 49, 39, 35, 23, 36, 49, 30,…\n$ SCIENCE &lt;dbl&gt; 15, 16, 16, 31, 25, 16, 25, 27, 15, 37, 42, 22, 32, 36, 35, 45…"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#basic-ridgeline-plot",
-    "href": "hands_on_exercise_4a.html#basic-ridgeline-plot",
-    "title": "Hands-on Exercise 4a",
-    "section": "1.1 Basic Ridgeline Plot",
-    "text": "1.1 Basic Ridgeline Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS\n  )\n) +\n  geom_density_ridges(\n    scale = 3,\n    rel_min_height = 0.01,\n    bandwidth = 3.4,\n    fill = colorspace::lighten(\"#7097BB\", 0.3),\n    color = \"white\"\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-gradient-fill",
-    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-gradient-fill",
-    "title": "Hands-on Exercise 4a",
-    "section": "1.2 Ridgeline Plot with Gradient Fill",
-    "text": "1.2 Ridgeline Plot with Gradient Fill\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = after_stat(x)\n  )\n) +\n  geom_density_ridges_gradient(\n    scale = 3,\n    rel_min_height = 0.01\n  ) +\n  scale_fill_viridis_c(\n    name = \"English score\",\n    option = \"C\"\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-tail-probability",
-    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-tail-probability",
-    "title": "Hands-on Exercise 4a",
-    "section": "1.3 Ridgeline Plot with Tail Probability",
-    "text": "1.3 Ridgeline Plot with Tail Probability\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = 0.5 - abs(0.5 - after_stat(ecdf))\n  )\n) +\n  stat_density_ridges(\n    geom = \"density_ridges_gradient\",\n    calc_ecdf = TRUE\n  ) +\n  scale_fill_viridis_c(\n    name = \"Tail probability\",\n    direction = -1\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-quartile-lines",
-    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-quartile-lines",
-    "title": "Hands-on Exercise 4a",
-    "section": "1.4 Ridgeline Plot with Quartile Lines",
-    "text": "1.4 Ridgeline Plot with Quartile Lines\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = factor(after_stat(quantile))\n  )\n) +\n  stat_density_ridges(\n    geom = \"density_ridges_gradient\",\n    calc_ecdf = TRUE,\n    quantiles = 4,\n    quantile_lines = TRUE\n  ) +\n  scale_fill_viridis_d(name = \"Quartiles\") +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-95-probability-range",
-    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-95-probability-range",
-    "title": "Hands-on Exercise 4a",
-    "section": "1.5 Ridgeline Plot with 95% Probability Range",
-    "text": "1.5 Ridgeline Plot with 95% Probability Range\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = factor(after_stat(quantile))\n  )\n) +\n  stat_density_ridges(\n    geom = \"density_ridges_gradient\",\n    calc_ecdf = TRUE,\n    quantiles = c(0.025, 0.975)\n  ) +\n  scale_fill_manual(\n    name = \"Probability\",\n    values = c(\"#FF0000A0\", \"#A0A0A0A0\", \"#0000FFA0\"),\n    labels = c(\"(0, 0.025]\", \"(0.025, 0.975]\", \"(0.975, 1]\")\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#half-eye-plot",
-    "href": "hands_on_exercise_4a.html#half-eye-plot",
-    "title": "Hands-on Exercise 4a",
-    "section": "2.1 Half-eye Plot",
-    "text": "2.1 Half-eye Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  labs(\n    title = \"Half-eye Plot of English Scores by Race\",\n    x = \"Race\",\n    y = \"English score\"\n  )"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot",
-    "href": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot",
-    "title": "Hands-on Exercise 4a",
-    "section": "2.2 Half-eye Plot with Boxplot",
-    "text": "2.2 Half-eye Plot with Boxplot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  geom_boxplot(\n    width = 0.20,\n    outlier.shape = NA\n  ) +\n  labs(\n    title = \"English Scores by Race\",\n    x = \"Race\",\n    y = \"English score\"\n  )"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot-and-dot-plot",
-    "href": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot-and-dot-plot",
-    "title": "Hands-on Exercise 4a",
-    "section": "2.3 Half-eye Plot with Boxplot and Dot Plot",
-    "text": "2.3 Half-eye Plot with Boxplot and Dot Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  geom_boxplot(\n    width = 0.20,\n    outlier.shape = NA\n  ) +\n  stat_dots(\n    side = \"left\",\n    justification = 1.2,\n    binwidth = 0.5,\n    dotsize = 2\n  ) +\n  labs(\n    title = \"Raincloud-style Distribution of English Scores\",\n    x = \"Race\",\n    y = \"English score\"\n  )"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#final-raincloud-plot",
-    "href": "hands_on_exercise_4a.html#final-raincloud-plot",
-    "title": "Hands-on Exercise 4a",
-    "section": "2.4 Final Raincloud Plot",
-    "text": "2.4 Final Raincloud Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  geom_boxplot(\n    width = 0.20,\n    outlier.shape = NA\n  ) +\n  stat_dots(\n    side = \"left\",\n    justification = 1.2,\n    binwidth = 0.5,\n    dotsize = 1.5\n  ) +\n  coord_flip() +\n  theme_economist() +\n  labs(\n    title = \"Raincloud Plot of English Scores by Race\",\n    x = \"Race\",\n    y = \"English score\"\n  )\n\n\nWarning: The provided binwidth will cause dots to overflow the boundaries of the\ngeometry.\n→ Set `binwidth = NA` to automatically determine a binwidth that ensures dots\n  fit within the bounds,\n→ OR set `overflow = \"compress\"` to automatically reduce the spacing between\n  dots to ensure the dots fit within the bounds,\n→ OR set `overflow = \"keep\"` to allow dots to overflow the bounds of the\n  geometry without producing a warning.\nℹ For more information, see the documentation of the `binwidth` and `overflow`\n  arguments of `?ggdist::geom_dots()` or the section on constraining dot sizes\n  in vignette(\"dotsinterval\") (`vignette(ggdist::dotsinterval)`)."
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#learning-reflection",
-    "href": "hands_on_exercise_4a.html#learning-reflection",
-    "title": "Hands-on Exercise 4a",
-    "section": "Learning Reflection",
-    "text": "Learning Reflection\nIn this exercise, I learned that ridgeline plots are useful for comparing score distributions across many groups, while raincloud plots combine density, boxplot, and raw observation views into one chart.\nThis hands-on exercise focuses on visualising distribution using ridgeline plots and raincloud plots."
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#setup-1",
-    "href": "hands_on_exercise_4a.html#setup-1",
-    "title": "Hands-on Exercise 4a",
-    "section": "Setup",
-    "text": "Setup\n\n\nCode\nif (!require(pacman)) install.packages(\"pacman\")\n\npacman::p_load(\n  ggdist,\n  ggridges,\n  ggthemes,\n  colorspace,\n  tidyverse\n)\n\nexam &lt;- read_csv(\"Exam_data.csv\")"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#data-preview-1",
-    "href": "hands_on_exercise_4a.html#data-preview-1",
-    "title": "Hands-on Exercise 4a",
-    "section": "Data Preview",
-    "text": "Data Preview\n\n\nCode\nglimpse(exam)\n\n\nRows: 322\nColumns: 7\n$ ID      &lt;chr&gt; \"Student321\", \"Student305\", \"Student289\", \"Student227\", \"Stude…\n$ CLASS   &lt;chr&gt; \"3I\", \"3I\", \"3H\", \"3F\", \"3I\", \"3I\", \"3I\", \"3I\", \"3I\", \"3H\", \"3…\n$ GENDER  &lt;chr&gt; \"Male\", \"Female\", \"Male\", \"Male\", \"Male\", \"Female\", \"Male\", \"M…\n$ RACE    &lt;chr&gt; \"Malay\", \"Malay\", \"Chinese\", \"Chinese\", \"Malay\", \"Malay\", \"Chi…\n$ ENGLISH &lt;dbl&gt; 21, 24, 26, 27, 27, 31, 31, 31, 33, 34, 34, 36, 36, 36, 37, 38…\n$ MATHS   &lt;dbl&gt; 9, 22, 16, 77, 11, 16, 21, 18, 19, 49, 39, 35, 23, 36, 49, 30,…\n$ SCIENCE &lt;dbl&gt; 15, 16, 16, 31, 25, 16, 25, 27, 15, 37, 42, 22, 32, 36, 35, 45…"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#basic-ridgeline-plot-1",
-    "href": "hands_on_exercise_4a.html#basic-ridgeline-plot-1",
-    "title": "Hands-on Exercise 4a",
-    "section": "1.1 Basic Ridgeline Plot",
-    "text": "1.1 Basic Ridgeline Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS\n  )\n) +\n  geom_density_ridges(\n    scale = 3,\n    rel_min_height = 0.01,\n    bandwidth = 3.4,\n    fill = colorspace::lighten(\"#7097BB\", 0.3),\n    color = \"white\"\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-gradient-fill-1",
-    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-gradient-fill-1",
-    "title": "Hands-on Exercise 4a",
-    "section": "1.2 Ridgeline Plot with Gradient Fill",
-    "text": "1.2 Ridgeline Plot with Gradient Fill\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = after_stat(x)\n  )\n) +\n  geom_density_ridges_gradient(\n    scale = 3,\n    rel_min_height = 0.01\n  ) +\n  scale_fill_viridis_c(\n    name = \"English score\",\n    option = \"C\"\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-tail-probability-1",
-    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-tail-probability-1",
-    "title": "Hands-on Exercise 4a",
-    "section": "1.3 Ridgeline Plot with Tail Probability",
-    "text": "1.3 Ridgeline Plot with Tail Probability\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = 0.5 - abs(0.5 - after_stat(ecdf))\n  )\n) +\n  stat_density_ridges(\n    geom = \"density_ridges_gradient\",\n    calc_ecdf = TRUE\n  ) +\n  scale_fill_viridis_c(\n    name = \"Tail probability\",\n    direction = -1\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-quartile-lines-1",
-    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-quartile-lines-1",
-    "title": "Hands-on Exercise 4a",
-    "section": "1.4 Ridgeline Plot with Quartile Lines",
-    "text": "1.4 Ridgeline Plot with Quartile Lines\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = factor(after_stat(quantile))\n  )\n) +\n  stat_density_ridges(\n    geom = \"density_ridges_gradient\",\n    calc_ecdf = TRUE,\n    quantiles = 4,\n    quantile_lines = TRUE\n  ) +\n  scale_fill_viridis_d(name = \"Quartiles\") +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#ridgeline-plot-with-95-probability-range-1",
-    "href": "hands_on_exercise_4a.html#ridgeline-plot-with-95-probability-range-1",
-    "title": "Hands-on Exercise 4a",
-    "section": "1.5 Ridgeline Plot with 95% Probability Range",
-    "text": "1.5 Ridgeline Plot with 95% Probability Range\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = ENGLISH,\n    y = CLASS,\n    fill = factor(after_stat(quantile))\n  )\n) +\n  stat_density_ridges(\n    geom = \"density_ridges_gradient\",\n    calc_ecdf = TRUE,\n    quantiles = c(0.025, 0.975)\n  ) +\n  scale_fill_manual(\n    name = \"Probability\",\n    values = c(\"#FF0000A0\", \"#A0A0A0A0\", \"#0000FFA0\"),\n    labels = c(\"(0, 0.025]\", \"(0.025, 0.975]\", \"(0.975, 1]\")\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(\n    name = NULL,\n    expand = expansion(add = c(0.2, 2.6))\n  ) +\n  theme_ridges()\n\n\nPicking joint bandwidth of 3.18"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#half-eye-plot-1",
-    "href": "hands_on_exercise_4a.html#half-eye-plot-1",
-    "title": "Hands-on Exercise 4a",
-    "section": "2.1 Half-eye Plot",
-    "text": "2.1 Half-eye Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  labs(\n    title = \"Half-eye Plot of English Scores by Race\",\n    x = \"Race\",\n    y = \"English score\"\n  )"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot-1",
-    "href": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot-1",
-    "title": "Hands-on Exercise 4a",
-    "section": "2.2 Half-eye Plot with Boxplot",
-    "text": "2.2 Half-eye Plot with Boxplot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  geom_boxplot(\n    width = 0.20,\n    outlier.shape = NA\n  ) +\n  labs(\n    title = \"English Scores by Race\",\n    x = \"Race\",\n    y = \"English score\"\n  )"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot-and-dot-plot-1",
-    "href": "hands_on_exercise_4a.html#half-eye-plot-with-boxplot-and-dot-plot-1",
-    "title": "Hands-on Exercise 4a",
-    "section": "2.3 Half-eye Plot with Boxplot and Dot Plot",
-    "text": "2.3 Half-eye Plot with Boxplot and Dot Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  geom_boxplot(\n    width = 0.20,\n    outlier.shape = NA\n  ) +\n  stat_dots(\n    side = \"left\",\n    justification = 1.2,\n    binwidth = 0.5,\n    dotsize = 2\n  ) +\n  labs(\n    title = \"Raincloud-style Distribution of English Scores\",\n    x = \"Race\",\n    y = \"English score\"\n  )"
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#final-raincloud-plot-1",
-    "href": "hands_on_exercise_4a.html#final-raincloud-plot-1",
-    "title": "Hands-on Exercise 4a",
-    "section": "2.4 Final Raincloud Plot",
-    "text": "2.4 Final Raincloud Plot\n\n\nCode\nggplot(\n  exam,\n  aes(\n    x = RACE,\n    y = ENGLISH\n  )\n) +\n  stat_halfeye(\n    adjust = 0.5,\n    justification = -0.2,\n    .width = 0,\n    point_colour = NA\n  ) +\n  geom_boxplot(\n    width = 0.20,\n    outlier.shape = NA\n  ) +\n  stat_dots(\n    side = \"left\",\n    justification = 1.2,\n    binwidth = 0.5,\n    dotsize = 1.5\n  ) +\n  coord_flip() +\n  theme_economist() +\n  labs(\n    title = \"Raincloud Plot of English Scores by Race\",\n    x = \"Race\",\n    y = \"English score\"\n  )\n\n\nWarning: The provided binwidth will cause dots to overflow the boundaries of the\ngeometry.\n→ Set `binwidth = NA` to automatically determine a binwidth that ensures dots\n  fit within the bounds,\n→ OR set `overflow = \"compress\"` to automatically reduce the spacing between\n  dots to ensure the dots fit within the bounds,\n→ OR set `overflow = \"keep\"` to allow dots to overflow the bounds of the\n  geometry without producing a warning.\nℹ For more information, see the documentation of the `binwidth` and `overflow`\n  arguments of `?ggdist::geom_dots()` or the section on constraining dot sizes\n  in vignette(\"dotsinterval\") (`vignette(ggdist::dotsinterval)`)."
-  },
-  {
-    "objectID": "hands_on_exercise_4a.html#learning-reflection-1",
-    "href": "hands_on_exercise_4a.html#learning-reflection-1",
-    "title": "Hands-on Exercise 4a",
-    "section": "Learning Reflection",
-    "text": "Learning Reflection\nIn this exercise, I learned that ridgeline plots are useful for comparing score distributions across many groups, while raincloud plots combine density, boxplot, and raw observation views into one chart."
-  },
-  {
-    "objectID": "hands_on_exercise_3a.html",
-    "href": "hands_on_exercise_3a.html",
-    "title": "Hands-on Exercise 3a",
-    "section": "",
-    "text": "This hands-on exercise recreates the key interactive visualisation techniques from Chapter 3 of R for Visual Analytics. The focus is on using ggiraph, plotly, DT, and crosstalk to make static R graphics interactive."
-  },
-  {
-    "objectID": "hands_on_exercise_3a.html#overview",
-    "href": "hands_on_exercise_3a.html#overview",
-    "title": "Hands-on Exercise 3a",
-    "section": "",
-    "text": "This hands-on exercise recreates the key interactive visualisation techniques from Chapter 3 of R for Visual Analytics. The focus is on using ggiraph, plotly, DT, and crosstalk to make static R graphics interactive."
-  },
-  {
-    "objectID": "hands_on_exercise_3a.html#setup",
-    "href": "hands_on_exercise_3a.html#setup",
-    "title": "Hands-on Exercise 3a",
-    "section": "Setup",
-    "text": "Setup\n\n\nCode\nif (!require(pacman)) install.packages(\"pacman\")\n\npacman::p_load(\n  ggiraph,\n  plotly,\n  patchwork,\n  DT,\n  tidyverse,\n  crosstalk\n)\n\nexam_data &lt;- read_csv(\"Exam_data.csv\")"
-  },
-  {
-    "objectID": "hands_on_exercise_3a.html#data-preview",
-    "href": "hands_on_exercise_3a.html#data-preview",
-    "title": "Hands-on Exercise 3a",
-    "section": "Data Preview",
-    "text": "Data Preview\n\n\nCode\nDT::datatable(\n  exam_data,\n  class = \"compact\",\n  options = list(\n    pageLength = 10,\n    scrollX = TRUE\n  )\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3a.html#tooltip-showing-student-id",
-    "href": "hands_on_exercise_3a.html#tooltip-showing-student-id",
-    "title": "Hands-on Exercise 3a",
-    "section": "1.1 Tooltip Showing Student ID",
-    "text": "1.1 Tooltip Showing Student ID\n\n\nCode\np &lt;- ggplot(exam_data, aes(x = MATHS)) +\n  geom_dotplot_interactive(\n    aes(tooltip = ID),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"Distribution of Maths Scores\",\n    x = \"Maths Score\"\n  )\n\ngirafe(\n  ggobj = p,\n  width_svg = 7,\n  height_svg = 4\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3a.html#tooltip-showing-multiple-information",
-    "href": "hands_on_exercise_3a.html#tooltip-showing-multiple-information",
-    "title": "Hands-on Exercise 3a",
-    "section": "1.2 Tooltip Showing Multiple Information",
-    "text": "1.2 Tooltip Showing Multiple Information\n\n\nCode\nexam_data &lt;- exam_data %&gt;%\n  mutate(\n    tooltip_text = paste0(\n      \"ID: \", ID,\n      \"\\nClass: \", CLASS,\n      \"\\nGender: \", GENDER,\n      \"\\nRace: \", RACE,\n      \"\\nMaths: \", MATHS\n    )\n  )\n\np &lt;- ggplot(exam_data, aes(x = MATHS)) +\n  geom_dotplot_interactive(\n    aes(tooltip = tooltip_text),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"Maths Score Distribution with Detailed Tooltip\",\n    x = \"Maths Score\"\n  )\n\ngirafe(\n  ggobj = p,\n  width_svg = 8,\n  height_svg = 4\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3a.html#custom-tooltip-style",
-    "href": "hands_on_exercise_3a.html#custom-tooltip-style",
-    "title": "Hands-on Exercise 3a",
-    "section": "1.3 Custom Tooltip Style",
-    "text": "1.3 Custom Tooltip Style\n\n\nCode\ntooltip_css &lt;- \"\n  background-color: white;\n  color: black;\n  font-weight: bold;\n  padding: 6px;\n  border-radius: 4px;\n  border: 1px solid #333333;\n\"\n\np &lt;- ggplot(exam_data, aes(x = MATHS)) +\n  geom_dotplot_interactive(\n    aes(tooltip = tooltip_text),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"Custom Tooltip Style\",\n    x = \"Maths Score\"\n  )\n\ngirafe(\n  ggobj = p,\n  width_svg = 8,\n  height_svg = 4,\n  options = list(\n    opts_tooltip(css = tooltip_css)\n  )\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3a.html#hover-effect-by-class",
-    "href": "hands_on_exercise_3a.html#hover-effect-by-class",
-    "title": "Hands-on Exercise 3a",
-    "section": "1.4 Hover Effect by Class",
-    "text": "1.4 Hover Effect by Class\n\n\nCode\np &lt;- ggplot(exam_data, aes(x = MATHS)) +\n  geom_dotplot_interactive(\n    aes(data_id = CLASS),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"Hover Highlight by Class\",\n    x = \"Maths Score\"\n  )\n\ngirafe(\n  ggobj = p,\n  width_svg = 8,\n  height_svg = 4\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3a.html#styled-hover-effect",
-    "href": "hands_on_exercise_3a.html#styled-hover-effect",
-    "title": "Hands-on Exercise 3a",
-    "section": "1.5 Styled Hover Effect",
-    "text": "1.5 Styled Hover Effect\n\n\nCode\np &lt;- ggplot(exam_data, aes(x = MATHS)) +\n  geom_dotplot_interactive(\n    aes(data_id = CLASS),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"Styled Hover Highlight by Class\",\n    x = \"Maths Score\"\n  )\n\ngirafe(\n  ggobj = p,\n  width_svg = 8,\n  height_svg = 4,\n  options = list(\n    opts_hover(css = \"fill: #202020;\"),\n    opts_hover_inv(css = \"opacity:0.2;\")\n  )\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3a.html#tooltip-and-hover-combined",
-    "href": "hands_on_exercise_3a.html#tooltip-and-hover-combined",
-    "title": "Hands-on Exercise 3a",
-    "section": "1.6 Tooltip and Hover Combined",
-    "text": "1.6 Tooltip and Hover Combined\n\n\nCode\np &lt;- ggplot(exam_data, aes(x = MATHS)) +\n  geom_dotplot_interactive(\n    aes(\n      tooltip = tooltip_text,\n      data_id = CLASS\n    ),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"Tooltip and Hover Combined\",\n    x = \"Maths Score\"\n  )\n\ngirafe(\n  ggobj = p,\n  width_svg = 8,\n  height_svg = 4,\n  options = list(\n    opts_tooltip(css = tooltip_css),\n    opts_hover(css = \"fill: #202020;\"),\n    opts_hover_inv(css = \"opacity:0.2;\")\n  )\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3a.html#coordinated-multiple-views-with-ggiraph",
-    "href": "hands_on_exercise_3a.html#coordinated-multiple-views-with-ggiraph",
-    "title": "Hands-on Exercise 3a",
-    "section": "1.7 Coordinated Multiple Views with ggiraph",
-    "text": "1.7 Coordinated Multiple Views with ggiraph\n\n\nCode\np1 &lt;- ggplot(exam_data, aes(x = MATHS)) +\n  geom_dotplot_interactive(\n    aes(data_id = ID, tooltip = tooltip_text),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  coord_cartesian(xlim = c(0, 100)) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"Maths\",\n    x = \"Maths Score\"\n  )\n\np2 &lt;- ggplot(exam_data, aes(x = ENGLISH)) +\n  geom_dotplot_interactive(\n    aes(data_id = ID, tooltip = tooltip_text),\n    stackgroups = TRUE,\n    binwidth = 1,\n    method = \"histodot\"\n  ) +\n  coord_cartesian(xlim = c(0, 100)) +\n  scale_y_continuous(NULL, breaks = NULL) +\n  labs(\n    title = \"English\",\n    x = \"English Score\"\n  )\n\ngirafe(\n  code = print(p1 + p2),\n  width_svg = 9,\n  height_svg = 4,\n  options = list(\n    opts_tooltip(css = tooltip_css),\n    opts_hover(css = \"fill: #202020;\"),\n    opts_hover_inv(css = \"opacity:0.2;\")\n  )\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3a.html#basic-interactive-scatter-plot",
-    "href": "hands_on_exercise_3a.html#basic-interactive-scatter-plot",
-    "title": "Hands-on Exercise 3a",
-    "section": "2.1 Basic Interactive Scatter Plot",
-    "text": "2.1 Basic Interactive Scatter Plot\n\n\nCode\nplot_ly(\n  data = exam_data,\n  x = ~MATHS,\n  y = ~ENGLISH,\n  type = \"scatter\",\n  mode = \"markers\"\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3a.html#scatter-plot-coloured-by-race",
-    "href": "hands_on_exercise_3a.html#scatter-plot-coloured-by-race",
-    "title": "Hands-on Exercise 3a",
-    "section": "2.2 Scatter Plot Coloured by Race",
-    "text": "2.2 Scatter Plot Coloured by Race\n\n\nCode\nplot_ly(\n  data = exam_data,\n  x = ~ENGLISH,\n  y = ~MATHS,\n  color = ~RACE,\n  type = \"scatter\",\n  mode = \"markers\",\n  text = ~paste(\n    \"ID:\", ID,\n    \"&lt;br&gt;Class:\", CLASS,\n    \"&lt;br&gt;Gender:\", GENDER,\n    \"&lt;br&gt;Race:\", RACE,\n    \"&lt;br&gt;English:\", ENGLISH,\n    \"&lt;br&gt;Maths:\", MATHS\n  ),\n  hoverinfo = \"text\"\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3a.html#ggplot-converted-to-interactive-plotly",
-    "href": "hands_on_exercise_3a.html#ggplot-converted-to-interactive-plotly",
-    "title": "Hands-on Exercise 3a",
-    "section": "2.3 ggplot Converted to Interactive Plotly",
-    "text": "2.3 ggplot Converted to Interactive Plotly\n\n\nCode\np &lt;- ggplot(exam_data, aes(x = MATHS, y = ENGLISH)) +\n  geom_point(size = 1) +\n  coord_cartesian(\n    xlim = c(0, 100),\n    ylim = c(0, 100)\n  ) +\n  labs(\n    title = \"English vs Maths\",\n    x = \"Maths Score\",\n    y = \"English Score\"\n  )\n\nggplotly(p)"
-  },
-  {
-    "objectID": "hands_on_exercise_3a.html#coordinated-multiple-views-with-plotly",
-    "href": "hands_on_exercise_3a.html#coordinated-multiple-views-with-plotly",
-    "title": "Hands-on Exercise 3a",
-    "section": "2.4 Coordinated Multiple Views with plotly",
-    "text": "2.4 Coordinated Multiple Views with plotly\n\n\nCode\nd &lt;- highlight_key(exam_data)\n\np1 &lt;- ggplot(d, aes(x = MATHS, y = ENGLISH)) +\n  geom_point(size = 1) +\n  coord_cartesian(\n    xlim = c(0, 100),\n    ylim = c(0, 100)\n  ) +\n  labs(\n    title = \"English vs Maths\",\n    x = \"Maths\",\n    y = \"English\"\n  )\n\np2 &lt;- ggplot(d, aes(x = MATHS, y = SCIENCE)) +\n  geom_point(size = 1) +\n  coord_cartesian(\n    xlim = c(0, 100),\n    ylim = c(0, 100)\n  ) +\n  labs(\n    title = \"Science vs Maths\",\n    x = \"Maths\",\n    y = \"Science\"\n  )\n\nsubplot(\n  ggplotly(p1),\n  ggplotly(p2),\n  titleX = TRUE,\n  titleY = TRUE\n)"
-  },
-  {
-    "objectID": "about.html",
-    "href": "about.html",
-    "title": "About",
-    "section": "",
-    "text": "About this site\n\n1 + 1\n\n[1] 2"
-  },
-  {
-    "objectID": "hands_on_exercise_3b.html",
-    "href": "hands_on_exercise_3b.html",
-    "title": "Hands-on Exercise 3b",
-    "section": "",
-    "text": "This section extends Hands-on Exercise 3 by creating animated statistical graphics using gganimate and plotly.\n\n\n\n\nCode\npacman::p_load(\n  readxl,\n  gifski,\n  gapminder,\n  plotly,\n  gganimate,\n  tidyverse\n)\n\n\n\n\n\n\n\nCode\nglobalPop &lt;- read_xls(\"GlobalPopulation.xls\", sheet = \"Data\") %&gt;%\n  mutate(\n    across(c(Country, Continent), as.factor),\n    Year = as.integer(Year)\n  )\n\n\n\n\n\n\n\nCode\nggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(alpha = 0.7, show.legend = FALSE) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    title = \"Population Structure\",\n    x = \"% Aged\",\n    y = \"% Young\"\n  )\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nCode\np &lt;- ggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(alpha = 0.7, show.legend = FALSE) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    title = \"Year: {frame_time}\",\n    x = \"% Aged\",\n    y = \"% Young\"\n  ) +\n  transition_time(Year) +\n  ease_aes(\"linear\")\n\nanimate(p, renderer = gifski_renderer())\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nCode\ngg &lt;- ggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(\n    aes(frame = Year),\n    alpha = 0.7\n  ) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    x = \"% Aged\",\n    y = \"% Young\"\n  ) +\n  theme(legend.position = \"none\")\n\n\nWarning in geom_point(aes(frame = Year), alpha = 0.7): Ignoring unknown\naesthetics: frame\n\n\nCode\nggplotly(gg)\n\n\nWarning in p$x$data[firstFrame] &lt;- p$x$frames[[1]]$data: number of items to\nreplace is not a multiple of replacement length\n\n\n\n\n\n\n\n\n\n\n\nCode\nglobalPop %&gt;%\n  plot_ly(\n    x = ~Old,\n    y = ~Young,\n    size = ~Population,\n    color = ~Continent,\n    sizes = c(2, 100),\n    frame = ~Year,\n    text = ~Country,\n    hoverinfo = \"text\",\n    type = \"scatter\",\n    mode = \"markers\"\n  ) %&gt;%\n  layout(showlegend = FALSE)\n\n\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\n\n\n\n\n\n\n\n\n\nIn this section, I learned how animation can be used to show changes over time. gganimate creates GIF-style animations from ggplot objects, while plotly creates interactive animated charts with play buttons and sliders."
-  },
-  {
-    "objectID": "hands_on_exercise_3b.html#setup-for-animated-graphics",
-    "href": "hands_on_exercise_3b.html#setup-for-animated-graphics",
-    "title": "Hands-on Exercise 3b",
-    "section": "",
-    "text": "Code\npacman::p_load(\n  readxl,\n  gifski,\n  gapminder,\n  plotly,\n  gganimate,\n  tidyverse\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_3b.html#import-global-population-data",
-    "href": "hands_on_exercise_3b.html#import-global-population-data",
-    "title": "Hands-on Exercise 3b",
-    "section": "",
-    "text": "Code\nglobalPop &lt;- read_xls(\"GlobalPopulation.xls\", sheet = \"Data\") %&gt;%\n  mutate(\n    across(c(Country, Continent), as.factor),\n    Year = as.integer(Year)\n  )"
-  },
-  {
-    "objectID": "hands_on_exercise_3b.html#static-population-bubble-plot",
-    "href": "hands_on_exercise_3b.html#static-population-bubble-plot",
-    "title": "Hands-on Exercise 3b",
-    "section": "",
-    "text": "Code\nggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(alpha = 0.7, show.legend = FALSE) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    title = \"Population Structure\",\n    x = \"% Aged\",\n    y = \"% Young\"\n  )"
-  },
-  {
-    "objectID": "hands_on_exercise_3b.html#animated-bubble-plot-using-gganimate",
-    "href": "hands_on_exercise_3b.html#animated-bubble-plot-using-gganimate",
-    "title": "Hands-on Exercise 3b",
-    "section": "",
-    "text": "Code\np &lt;- ggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(alpha = 0.7, show.legend = FALSE) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    title = \"Year: {frame_time}\",\n    x = \"% Aged\",\n    y = \"% Young\"\n  ) +\n  transition_time(Year) +\n  ease_aes(\"linear\")\n\nanimate(p, renderer = gifski_renderer())"
-  },
-  {
-    "objectID": "hands_on_exercise_3b.html#animated-bubble-plot-using-ggplotly",
-    "href": "hands_on_exercise_3b.html#animated-bubble-plot-using-ggplotly",
-    "title": "Hands-on Exercise 3b",
-    "section": "",
-    "text": "Code\ngg &lt;- ggplot(globalPop, aes(\n  x = Old,\n  y = Young,\n  size = Population,\n  colour = Country\n)) +\n  geom_point(\n    aes(frame = Year),\n    alpha = 0.7\n  ) +\n  scale_colour_manual(values = gapminder::country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(\n    x = \"% Aged\",\n    y = \"% Young\"\n  ) +\n  theme(legend.position = \"none\")\n\n\nWarning in geom_point(aes(frame = Year), alpha = 0.7): Ignoring unknown\naesthetics: frame\n\n\nCode\nggplotly(gg)\n\n\nWarning in p$x$data[firstFrame] &lt;- p$x$frames[[1]]$data: number of items to\nreplace is not a multiple of replacement length"
-  },
-  {
-    "objectID": "hands_on_exercise_3b.html#animated-bubble-plot-using-plot_ly",
-    "href": "hands_on_exercise_3b.html#animated-bubble-plot-using-plot_ly",
-    "title": "Hands-on Exercise 3b",
-    "section": "",
-    "text": "Code\nglobalPop %&gt;%\n  plot_ly(\n    x = ~Old,\n    y = ~Young,\n    size = ~Population,\n    color = ~Continent,\n    sizes = c(2, 100),\n    frame = ~Year,\n    text = ~Country,\n    hoverinfo = \"text\",\n    type = \"scatter\",\n    mode = \"markers\"\n  ) %&gt;%\n  layout(showlegend = FALSE)\n\n\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values.\nWarning: `line.width` does not currently support multiple values."
-  },
-  {
-    "objectID": "hands_on_exercise_3b.html#learning-reflection",
-    "href": "hands_on_exercise_3b.html#learning-reflection",
-    "title": "Hands-on Exercise 3b",
-    "section": "",
-    "text": "In this section, I learned how animation can be used to show changes over time. gganimate creates GIF-style animations from ggplot objects, while plotly creates interactive animated charts with play buttons and sliders."
-  },
-  {
-    "objectID": "hands_on_exercise_4b.html",
-    "href": "hands_on_exercise_4b.html",
-    "title": "Hands-on Exercise 4b",
-    "section": "",
-    "text": "This hands-on exercise focuses on visual statistical analysis using the ggstatsplot package."
-  },
-  {
-    "objectID": "hands_on_exercise_4b.html#overview",
-    "href": "hands_on_exercise_4b.html#overview",
-    "title": "Hands-on Exercise 4b",
-    "section": "",
-    "text": "This hands-on exercise focuses on visual statistical analysis using the ggstatsplot package."
-  },
-  {
-    "objectID": "hands_on_exercise_4b.html#setup",
-    "href": "hands_on_exercise_4b.html#setup",
-    "title": "Hands-on Exercise 4b",
-    "section": "Setup",
-    "text": "Setup\n\n\nCode\nif (!require(pacman)) install.packages(\"pacman\")\n\npacman::p_load(\n  ggstatsplot,\n  tidyverse\n)\n\nexam &lt;- read_csv(\"Exam_data.csv\")"
-  },
-  {
-    "objectID": "hands_on_exercise_4b.html#data-preview",
-    "href": "hands_on_exercise_4b.html#data-preview",
-    "title": "Hands-on Exercise 4b",
-    "section": "Data Preview",
-    "text": "Data Preview\n\n\nCode\nglimpse(exam)\n\n\nRows: 322\nColumns: 7\n$ ID      &lt;chr&gt; \"Student321\", \"Student305\", \"Student289\", \"Student227\", \"Stude…\n$ CLASS   &lt;chr&gt; \"3I\", \"3I\", \"3H\", \"3F\", \"3I\", \"3I\", \"3I\", \"3I\", \"3I\", \"3H\", \"3…\n$ GENDER  &lt;chr&gt; \"Male\", \"Female\", \"Male\", \"Male\", \"Male\", \"Female\", \"Male\", \"M…\n$ RACE    &lt;chr&gt; \"Malay\", \"Malay\", \"Chinese\", \"Chinese\", \"Malay\", \"Malay\", \"Chi…\n$ ENGLISH &lt;dbl&gt; 21, 24, 26, 27, 27, 31, 31, 31, 33, 34, 34, 36, 36, 36, 37, 38…\n$ MATHS   &lt;dbl&gt; 9, 22, 16, 77, 11, 16, 21, 18, 19, 49, 39, 35, 23, 36, 49, 30,…\n$ SCIENCE &lt;dbl&gt; 15, 16, 16, 31, 25, 16, 25, 27, 15, 37, 42, 22, 32, 36, 35, 45…"
-  },
-  {
-    "objectID": "hands_on_exercise_4b.html#one-sample-test-for-english-scores",
-    "href": "hands_on_exercise_4b.html#one-sample-test-for-english-scores",
-    "title": "Hands-on Exercise 4b",
-    "section": "1.1 One-sample Test for English Scores",
-    "text": "1.1 One-sample Test for English Scores\n\n\nCode\nset.seed(1234)\n\ngghistostats(\n  data = exam,\n  x = ENGLISH,\n  type = \"bayes\",\n  test.value = 60,\n  xlab = \"English scores\"\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_4b.html#maths-scores-by-gender",
-    "href": "hands_on_exercise_4b.html#maths-scores-by-gender",
-    "title": "Hands-on Exercise 4b",
-    "section": "2.1 Maths Scores by Gender",
-    "text": "2.1 Maths Scores by Gender\n\n\nCode\nggbetweenstats(\n  data = exam,\n  x = GENDER,\n  y = MATHS,\n  type = \"np\",\n  messages = FALSE\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_4b.html#english-scores-by-race",
-    "href": "hands_on_exercise_4b.html#english-scores-by-race",
-    "title": "Hands-on Exercise 4b",
-    "section": "3.1 English Scores by Race",
-    "text": "3.1 English Scores by Race\n\n\nCode\nggbetweenstats(\n  data = exam,\n  x = RACE,\n  y = ENGLISH,\n  type = \"p\",\n  mean.ci = TRUE,\n  pairwise.comparisons = TRUE,\n  pairwise.display = \"s\",\n  p.adjust.method = \"fdr\",\n  messages = FALSE\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_4b.html#maths-scores-vs-english-scores",
-    "href": "hands_on_exercise_4b.html#maths-scores-vs-english-scores",
-    "title": "Hands-on Exercise 4b",
-    "section": "4.1 Maths Scores vs English Scores",
-    "text": "4.1 Maths Scores vs English Scores\n\n\nCode\nggscatterstats(\n  data = exam,\n  x = MATHS,\n  y = ENGLISH,\n  marginal = FALSE\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_4b.html#binning-maths-scores",
-    "href": "hands_on_exercise_4b.html#binning-maths-scores",
-    "title": "Hands-on Exercise 4b",
-    "section": "5.1 Binning Maths Scores",
-    "text": "5.1 Binning Maths Scores\n\n\nCode\nexam1 &lt;- exam %&gt;%\n  mutate(\n    MATHS_bins = cut(\n      MATHS,\n      breaks = c(0, 60, 75, 85, 100),\n      include.lowest = TRUE,\n      labels = c(\"0-60\", \"61-75\", \"76-85\", \"86-100\")\n    )\n  )\n\nexam1 %&gt;%\n  count(MATHS_bins, GENDER)\n\n\n# A tibble: 8 × 3\n  MATHS_bins GENDER     n\n  &lt;fct&gt;      &lt;chr&gt;  &lt;int&gt;\n1 0-60       Female    44\n2 0-60       Male      43\n3 61-75      Female    48\n4 61-75      Male      36\n5 76-85      Female    42\n6 76-85      Male      37\n7 86-100     Female    36\n8 86-100     Male      36"
-  },
-  {
-    "objectID": "hands_on_exercise_4b.html#association-between-maths-score-bands-and-gender",
-    "href": "hands_on_exercise_4b.html#association-between-maths-score-bands-and-gender",
-    "title": "Hands-on Exercise 4b",
-    "section": "5.2 Association Between Maths Score Bands and Gender",
-    "text": "5.2 Association Between Maths Score Bands and Gender\n\n\nCode\nggbarstats(\n  data = exam1,\n  x = MATHS_bins,\n  y = GENDER\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_4b.html#science-scores-by-gender",
-    "href": "hands_on_exercise_4b.html#science-scores-by-gender",
-    "title": "Hands-on Exercise 4b",
-    "section": "6.1 Science Scores by Gender",
-    "text": "6.1 Science Scores by Gender\n\n\nCode\nggbetweenstats(\n  data = exam,\n  x = GENDER,\n  y = SCIENCE,\n  type = \"np\",\n  messages = FALSE\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_4b.html#science-scores-vs-maths-scores",
-    "href": "hands_on_exercise_4b.html#science-scores-vs-maths-scores",
-    "title": "Hands-on Exercise 4b",
-    "section": "6.2 Science Scores vs Maths Scores",
-    "text": "6.2 Science Scores vs Maths Scores\n\n\nCode\nggscatterstats(\n  data = exam,\n  x = SCIENCE,\n  y = MATHS,\n  marginal = FALSE\n)"
-  },
-  {
-    "objectID": "hands_on_exercise_4b.html#learning-reflection",
-    "href": "hands_on_exercise_4b.html#learning-reflection",
-    "title": "Hands-on Exercise 4b",
-    "section": "Learning Reflection",
-    "text": "Learning Reflection\nIn this exercise, I learned that ggstatsplot is useful because it combines statistical test results with visualisation. Instead of only showing the chart, it also displays useful statistical information such as test statistics, p-values, confidence intervals, and sample sizes."
-  },
-  {
-    "objectID": "hands_on_exercise_4d.html",
-    "href": "hands_on_exercise_4d.html",
-    "title": "Hands-on Exercise 4d",
-    "section": "",
-    "text": "This hands-on exercise focuses on using funnel plots to make fair comparisons across groups. The example uses cumulative COVID-19 cases and deaths by sub-district in DKI Jakarta."
-  },
-  {
-    "objectID": "hands_on_exercise_4d.html#overview",
-    "href": "hands_on_exercise_4d.html#overview",
-    "title": "Hands-on Exercise 4d",
-    "section": "",
-    "text": "This hands-on exercise focuses on using funnel plots to make fair comparisons across groups. The example uses cumulative COVID-19 cases and deaths by sub-district in DKI Jakarta."
-  },
-  {
-    "objectID": "hands_on_exercise_4d.html#setup",
-    "href": "hands_on_exercise_4d.html#setup",
-    "title": "Hands-on Exercise 4d",
-    "section": "Setup",
-    "text": "Setup\n\n\nCode\nif (!require(pacman)) install.packages(\"pacman\")\n\npacman::p_load(\n  tidyverse,\n  FunnelPlotR,\n  plotly,\n  knitr\n)\n\ncovid19 &lt;- read_csv(\"COVID-19_DKI_Jakarta.csv\") %&gt;%\n  mutate_if(is.character, as.factor)"
-  },
-  {
-    "objectID": "hands_on_exercise_4d.html#data-preview",
-    "href": "hands_on_exercise_4d.html#data-preview",
-    "title": "Hands-on Exercise 4d",
-    "section": "Data Preview",
-    "text": "Data Preview\n\n\nCode\nglimpse(covid19)\n\n\nRows: 267\nColumns: 7\n$ `Sub-district ID` &lt;dbl&gt; 3172051003, 3173041007, 3175041005, 3175031003, 3175…\n$ City              &lt;fct&gt; JAKARTA UTARA, JAKARTA BARAT, JAKARTA TIMUR, JAKARTA…\n$ District          &lt;fct&gt; PADEMANGAN, TAMBORA, KRAMAT JATI, JATINEGARA, CIPAYU…\n$ `Sub-district`    &lt;fct&gt; ANCOL, ANGKE, BALE KAMBANG, BALI MESTER, BAMBU APUS,…\n$ Positive          &lt;dbl&gt; 1776, 1783, 2049, 827, 2866, 1828, 2541, 3608, 2012,…\n$ Recovered         &lt;dbl&gt; 1691, 1720, 1964, 797, 2792, 1757, 2433, 3445, 1937,…\n$ Death             &lt;dbl&gt; 26, 29, 31, 13, 27, 26, 37, 68, 38, 52, 72, 28, 25, …\n\n\n\n\nCode\nknitr::kable(\n  head(covid19),\n  format = \"html\"\n)\n\n\n\n\n\nSub-district ID\nCity\nDistrict\nSub-district\nPositive\nRecovered\nDeath\n\n\n\n\n3172051003\nJAKARTA UTARA\nPADEMANGAN\nANCOL\n1776\n1691\n26\n\n\n3173041007\nJAKARTA BARAT\nTAMBORA\nANGKE\n1783\n1720\n29\n\n\n3175041005\nJAKARTA TIMUR\nKRAMAT JATI\nBALE KAMBANG\n2049\n1964\n31\n\n\n3175031003\nJAKARTA TIMUR\nJATINEGARA\nBALI MESTER\n827\n797\n13\n\n\n3175101006\nJAKARTA TIMUR\nCIPAYUNG\nBAMBU APUS\n2866\n2792\n27\n\n\n3174031002\nJAKARTA SELATAN\nMAMPANG PRAPATAN\nBANGKA\n1828\n1757\n26"
-  },
-  {
-    "objectID": "hands_on_exercise_4d.html#basic-funnel-plot",
-    "href": "hands_on_exercise_4d.html#basic-funnel-plot",
-    "title": "Hands-on Exercise 4d",
-    "section": "1.1 Basic Funnel Plot",
-    "text": "1.1 Basic Funnel Plot\n\n\nCode\nfunnel_plot(\n  .data = covid19,\n  numerator = Positive,\n  denominator = Death,\n  group = `Sub-district`\n)\n\n\n\n\n\n\n\n\n\nA funnel plot object with 267 points of which 0 are outliers. \nPlot is adjusted for overdispersion."
-  },
-  {
-    "objectID": "hands_on_exercise_4d.html#funnel-plot-using-proportion-rate",
-    "href": "hands_on_exercise_4d.html#funnel-plot-using-proportion-rate",
-    "title": "Hands-on Exercise 4d",
-    "section": "1.2 Funnel Plot Using Proportion Rate",
-    "text": "1.2 Funnel Plot Using Proportion Rate\n\n\nCode\nfunnel_plot(\n  .data = covid19,\n  numerator = Death,\n  denominator = Positive,\n  group = `Sub-district`,\n  data_type = \"PR\",\n  xrange = c(0, 6500),\n  yrange = c(0, 0.05)\n)\n\n\nWarning: The `xrange` argument deprecated; please use the `x_range`\n            argument instead.  For more options, see the help: `?funnel_plot`\n\n\nWarning: The `yrange` argument deprecated; please use the `y_range` argument\n            instead.  For more options, see the help: `?funnel_plot`\n\n\n\n\n\n\n\n\n\nA funnel plot object with 267 points of which 7 are outliers. \nPlot is adjusted for overdispersion."
-  },
-  {
-    "objectID": "hands_on_exercise_4d.html#funnel-plot-with-custom-labels",
-    "href": "hands_on_exercise_4d.html#funnel-plot-with-custom-labels",
-    "title": "Hands-on Exercise 4d",
-    "section": "1.3 Funnel Plot with Custom Labels",
-    "text": "1.3 Funnel Plot with Custom Labels\n\n\nCode\nfunnel_plot(\n  .data = covid19,\n  numerator = Death,\n  denominator = Positive,\n  group = `Sub-district`,\n  data_type = \"PR\",\n  xrange = c(0, 6500),\n  yrange = c(0, 0.05),\n  label = NA,\n  title = \"Cumulative COVID-19 Fatality Rate by Cumulative Total Number of COVID-19 Positive Cases\",\n  x_label = \"Cumulative COVID-19 Positive Cases\",\n  y_label = \"Cumulative Fatality Rate\"\n)\n\n\nWarning: The `xrange` argument deprecated; please use the `x_range`\n            argument instead.  For more options, see the help: `?funnel_plot`\n\n\nWarning: The `yrange` argument deprecated; please use the `y_range` argument\n            instead.  For more options, see the help: `?funnel_plot`\n\n\n\n\n\n\n\n\n\nA funnel plot object with 267 points of which 7 are outliers. \nPlot is adjusted for overdispersion."
-  },
-  {
-    "objectID": "hands_on_exercise_4d.html#computing-derived-fields",
-    "href": "hands_on_exercise_4d.html#computing-derived-fields",
-    "title": "Hands-on Exercise 4d",
-    "section": "2.1 Computing Derived Fields",
-    "text": "2.1 Computing Derived Fields\n\n\nCode\ndf &lt;- covid19 %&gt;%\n  mutate(\n    rate = Death / Positive,\n    rate.se = sqrt((rate * (1 - rate)) / Positive)\n  ) %&gt;%\n  filter(\n    rate &gt; 0,\n    Positive &gt; 0,\n    !is.na(rate),\n    !is.na(rate.se)\n  )\n\nfit.mean &lt;- weighted.mean(df$rate, 1 / df$rate.se^2)\n\nknitr::kable(\n  head(df),\n  format = \"html\",\n  digits = 4\n)\n\n\n\n\n\nSub-district ID\nCity\nDistrict\nSub-district\nPositive\nRecovered\nDeath\nrate\nrate.se\n\n\n\n\n3172051003\nJAKARTA UTARA\nPADEMANGAN\nANCOL\n1776\n1691\n26\n0.0146\n0.0028\n\n\n3173041007\nJAKARTA BARAT\nTAMBORA\nANGKE\n1783\n1720\n29\n0.0163\n0.0030\n\n\n3175041005\nJAKARTA TIMUR\nKRAMAT JATI\nBALE KAMBANG\n2049\n1964\n31\n0.0151\n0.0027\n\n\n3175031003\nJAKARTA TIMUR\nJATINEGARA\nBALI MESTER\n827\n797\n13\n0.0157\n0.0043\n\n\n3175101006\nJAKARTA TIMUR\nCIPAYUNG\nBAMBU APUS\n2866\n2792\n27\n0.0094\n0.0018\n\n\n3174031002\nJAKARTA SELATAN\nMAMPANG PRAPATAN\nBANGKA\n1828\n1757\n26\n0.0142\n0.0028"
-  },
-  {
-    "objectID": "hands_on_exercise_4d.html#calculating-confidence-limits",
-    "href": "hands_on_exercise_4d.html#calculating-confidence-limits",
-    "title": "Hands-on Exercise 4d",
-    "section": "2.2 Calculating Confidence Limits",
-    "text": "2.2 Calculating Confidence Limits\n\n\nCode\nnumber.seq &lt;- seq(1, max(df$Positive), 1)\n\nnumber.ll95 &lt;- fit.mean - 1.96 * sqrt((fit.mean * (1 - fit.mean)) / number.seq)\nnumber.ul95 &lt;- fit.mean + 1.96 * sqrt((fit.mean * (1 - fit.mean)) / number.seq)\n\nnumber.ll999 &lt;- fit.mean - 3.29 * sqrt((fit.mean * (1 - fit.mean)) / number.seq)\nnumber.ul999 &lt;- fit.mean + 3.29 * sqrt((fit.mean * (1 - fit.mean)) / number.seq)\n\ndfCI &lt;- data.frame(\n  number.seq = number.seq,\n  number.ll95 = pmax(0, number.ll95),\n  number.ul95 = number.ul95,\n  number.ll999 = pmax(0, number.ll999),\n  number.ul999 = number.ul999,\n  fit.mean = fit.mean\n)\n\nknitr::kable(\n  head(dfCI),\n  format = \"html\",\n  digits = 4\n)\n\n\n\n\n\nnumber.seq\nnumber.ll95\nnumber.ul95\nnumber.ll999\nnumber.ul999\nfit.mean\n\n\n\n\n1\n0\n0.2530\n0\n0.4145\n0.015\n\n\n2\n0\n0.1833\n0\n0.2975\n0.015\n\n\n3\n0\n0.1524\n0\n0.2456\n0.015\n\n\n4\n0\n0.1340\n0\n0.2147\n0.015\n\n\n5\n0\n0.1214\n0\n0.1936\n0.015\n\n\n6\n0\n0.1121\n0\n0.1781\n0.015"
-  },
-  {
-    "objectID": "hands_on_exercise_4d.html#static-funnel-plot",
-    "href": "hands_on_exercise_4d.html#static-funnel-plot",
-    "title": "Hands-on Exercise 4d",
-    "section": "2.3 Static Funnel Plot",
-    "text": "2.3 Static Funnel Plot\n\n\nCode\np &lt;- ggplot(\n  df,\n  aes(\n    x = Positive,\n    y = rate\n  )\n) +\n  geom_point(\n    aes(\n      label = `Sub-district`,\n      text = paste(\n        \"Sub-district:\", `Sub-district`,\n        \"&lt;br&gt;City:\", City,\n        \"&lt;br&gt;District:\", District,\n        \"&lt;br&gt;Positive cases:\", Positive,\n        \"&lt;br&gt;Deaths:\", Death,\n        \"&lt;br&gt;Fatality rate:\", round(rate, 4)\n      )\n    ),\n    alpha = 0.4\n  ) +\n  geom_line(\n    data = dfCI,\n    aes(\n      x = number.seq,\n      y = number.ll95\n    ),\n    linewidth = 0.4,\n    colour = \"grey40\",\n    linetype = \"dashed\"\n  ) +\n  geom_line(\n    data = dfCI,\n    aes(\n      x = number.seq,\n      y = number.ul95\n    ),\n    linewidth = 0.4,\n    colour = \"grey40\",\n    linetype = \"dashed\"\n  ) +\n  geom_line(\n    data = dfCI,\n    aes(\n      x = number.seq,\n      y = number.ll999\n    ),\n    linewidth = 0.4,\n    colour = \"grey40\"\n  ) +\n  geom_line(\n    data = dfCI,\n    aes(\n      x = number.seq,\n      y = number.ul999\n    ),\n    linewidth = 0.4,\n    colour = \"grey40\"\n  ) +\n  geom_hline(\n    data = dfCI,\n    aes(yintercept = fit.mean),\n    linewidth = 0.4,\n    colour = \"grey40\"\n  ) +\n  coord_cartesian(\n    ylim = c(0, 0.05)\n  ) +\n  ggtitle(\"Cumulative Fatality Rate by Cumulative Number of COVID-19 Cases\") +\n  xlab(\"Cumulative Number of COVID-19 Positive Cases\") +\n  ylab(\"Cumulative Fatality Rate\") +\n  theme_light() +\n  theme(\n    plot.title = element_text(size = 12)\n  )\n\n\nWarning in geom_point(aes(label = `Sub-district`, text = paste(\"Sub-district:\",\n: Ignoring unknown aesthetics: label and text\n\n\nCode\np"
-  },
-  {
-    "objectID": "hands_on_exercise_4d.html#interactive-funnel-plot",
-    "href": "hands_on_exercise_4d.html#interactive-funnel-plot",
-    "title": "Hands-on Exercise 4d",
-    "section": "2.4 Interactive Funnel Plot",
-    "text": "2.4 Interactive Funnel Plot\n\n\nCode\nfp_ggplotly &lt;- ggplotly(\n  p,\n  tooltip = c(\"text\", \"x\", \"y\")\n)\n\nfp_ggplotly"
-  },
-  {
-    "objectID": "hands_on_exercise_4d.html#learning-reflection",
-    "href": "hands_on_exercise_4d.html#learning-reflection",
-    "title": "Hands-on Exercise 4d",
-    "section": "Learning Reflection",
-    "text": "Learning Reflection\nIn this exercise, I learned that funnel plots are useful when comparing rates across groups with different sample sizes. They help reduce misleading conclusions by showing expected statistical variation around the overall average."
+    "objectID": "take_home_ex1/index.html#tldr",
+    "href": "take_home_ex1/index.html#tldr",
+    "title": "Take-home Exercise 1",
+    "section": "TL;DR",
+    "text": "TL;DR\n\n\n\n\n\n\n\nFinding\nEvidence\n\n\n\n\nPortfolio LR deteriorated 65.6% → 74.7% in 2 years\nAggregated LR by underwriting year\n\n\nComp. (basic) at 93.9% LR is the prime under-performer\nLR by policy type\n\n\nDiesel runs 9 pp above gasoline\nLR by fuel type, χ² p &lt; 0.001\n\n\nTop 5% of policies = 83% of losses\nLoss concentration curve\n\n\nSemi-annual / quarterly payers signal adverse selection\nLR by payment frequency\n\n\n\nBuilt with tidyverse for wrangling and ggplot2 + extensions (ggridges, ggdist, ggstatsplot, patchwork) for visual analytics."
   }
 ]
