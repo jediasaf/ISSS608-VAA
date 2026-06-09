@@ -236,5 +236,159 @@
     "title": "Take-home Exercise 1",
     "section": "TL;DR",
     "text": "TL;DR\n\n\n\n\n\n\n\nFinding\nEvidence\n\n\n\n\nPortfolio LR deteriorated 65.6% → 74.7% in 2 years\nAggregated LR by underwriting year\n\n\nComp. (basic) at 93.9% LR is the prime under-performer\nLR by policy type\n\n\nDiesel runs 9 pp above gasoline\nLR by fuel type, χ² p &lt; 0.001\n\n\nTop 5% of policies = 83% of losses\nLoss concentration curve\n\n\nSemi-annual / quarterly payers signal adverse selection\nLR by payment frequency\n\n\n\nBuilt with tidyverse for wrangling and ggplot2 + extensions (ggridges, ggdist, ggstatsplot, patchwork) for visual analytics."
+  },
+  {
+    "objectID": "take_home_ex2/report.html",
+    "href": "take_home_ex2/report.html",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "",
+    "text": "On 5 June 2046, embargoed information about TenantThread’s merger with CivicLoom Realty Partners (codename Project HarborCrest) appeared on the social platform FleX by accounts associated with the company’s automated communications system — one hour before the 6:00 PM official announcement. CivicLoom’s legal team now needs to know whether the leak was the result of deliberate action by TenantThread’s agents or a system breakdown under pressure.\nThis study uses the released two-week corporate-communications log (912 messages across 23 hour-long rounds from 7 AI agents) to answer the three questions posed by VAST Challenge 2026 MC1:\n\nWhat was the sequence of events that led to the inappropriate release?\nHow did the leak-day behaviour differ from typical behaviour?\nWere there leading indicators that this kind of release was possible?\n\nHeadline finding: The leak was coordinated, not accidental. The legal_agent — the company’s own compliance counsel — drove the breach using two channels that the compliance officer (the Judge) was not scoped to monitor: a private side_huddle (informally called the Shadow Channel) that was operational eight days before the Judge arrived, and an anonymous_post channel that had never been used in the prior thirteen days. The Judge’s monitoring was confined to the public comms_huddle, leaving the off-channel coordination invisible."
+  },
+  {
+    "objectID": "take_home_ex2/report.html#import-the-nested-json",
+    "href": "take_home_ex2/report.html#import-the-nested-json",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "3.1 Import the nested JSON",
+    "text": "3.1 Import the nested JSON\n\n\nShow the code\nmc1 &lt;- fromJSON(\"data/MC1_final_00.json\", simplifyVector = FALSE)\nlength(mc1$rounds)  # 23 rounds\n\n\n[1] 23"
+  },
+  {
+    "objectID": "take_home_ex2/report.html#flatten-to-a-tidy-messages-table",
+    "href": "take_home_ex2/report.html#flatten-to-a-tidy-messages-table",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "3.2 Flatten to a tidy messages table",
+    "text": "3.2 Flatten to a tidy messages table\nEach communication carries its agent, channel, message type, recipient list, content, internal-state thoughts, and (importantly) the round it occurred in.\n\n\nShow the code\nflatten_round &lt;- function(round) {\n  hr &lt;- round$hour\n  msgs &lt;- map_dfr(round$communications, function(m) {\n    st &lt;- m$internal_state %||% list()\n    tibble(\n      hour          = hr,\n      message_id    = m$message_id %||% NA_character_,\n      agent_id      = m$agent_id,\n      agent_role    = m$agent_role,\n      agent_label   = m$agent_label,\n      channel       = m$channel,\n      message_type  = m$message_type %||% NA_character_,\n      responding_to = m$responding_to %||% NA_character_,\n      content       = m$content %||% \"\",\n      n_recipients  = length(m$recipients %||% list()),\n      reacting      = st$reacting      %||% NA_character_,\n      rationalizing = st$rationalizing %||% NA_character_,\n      deliberating  = st$deliberating  %||% NA_character_\n    )\n  })\n  msgs\n}\n\n`%||%` &lt;- function(a, b) if (is.null(a)) b else a\n\nmsgs &lt;- map_dfr(mc1$rounds, flatten_round) |&gt;\n  mutate(\n    time   = ymd_hms(hour, tz = \"UTC\"),\n    day    = as_date(time),\n    is_crisis_day = day == as_date(\"2046-06-05\"),\n    phase  = case_when(\n      time &lt;  ymd(\"2046-05-30\")           ~ \"Pre-Judge\",\n      time &lt;  ymd(\"2046-06-05\")           ~ \"Judge present, pre-crisis\",\n      TRUE                                 ~ \"Crisis day\"\n    ) |&gt; fct_relevel(\"Pre-Judge\",\"Judge present, pre-crisis\",\"Crisis day\")\n  )\n\ndim(msgs)\n\n\n[1] 912  17\n\n\nA second table captures each round’s narrative and the action declared by each participating agent.\n\n\nShow the code\nparts &lt;- map_dfr(mc1$rounds, function(r) {\n  map_dfr(r$participants, function(p) {\n    tibble(hour = r$hour,\n           agent_id        = p$agent_id,\n           agent_role      = p$agent_role,\n           declared_action = if (is.character(p$declared_action))\n                                p$declared_action else NA_character_)\n  })\n}) |&gt;\n  mutate(time = ymd_hms(hour, tz = \"UTC\"),\n         day  = as_date(time))\n\nnarrative &lt;- map_dfr(mc1$rounds, function(r) {\n  ctx &lt;- r$environment_context\n  tibble(hour     = r$hour,\n         headline = ctx$event_headline %||% \"\",\n         story    = ctx$event_narrative %||% \"\")\n}) |&gt;\n  mutate(time = ymd_hms(hour, tz = \"UTC\"))"
+  },
+  {
+    "objectID": "take_home_ex2/report.html#quality-summary",
+    "href": "take_home_ex2/report.html#quality-summary",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "3.3 Quality summary",
+    "text": "3.3 Quality summary\n\n\nShow the code\nmsgs |&gt;\n  count(phase, name = \"messages\") |&gt;\n  mutate(share = percent(messages / sum(messages), 0.1)) |&gt;\n  gt() |&gt; tab_header(title = \"Messages by phase\")\n\n\n\n\nTable 1\n\n\n\n\n\n\n\n\n\nMessages by phase\n\n\nphase\nmessages\nshare\n\n\n\n\nPre-Judge\n302\n33.1%\n\n\nJudge present, pre-crisis\n115\n12.6%\n\n\nCrisis day\n495\n54.3%"
+  },
+  {
+    "objectID": "take_home_ex2/report.html#agent-activity",
+    "href": "take_home_ex2/report.html#agent-activity",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "4.1 Agent activity",
+    "text": "4.1 Agent activity\n\n\nShow the code\nmsgs |&gt;\n  count(agent_id) |&gt;\n  ggplot(aes(reorder(agent_id, n), n, fill = agent_id)) +\n  geom_col() +\n  geom_text(aes(label = comma(n)), hjust = -0.1, size = 3.5) +\n  scale_fill_manual(values = agent_pal, guide = \"none\") +\n  scale_y_continuous(expand = expansion(c(0, .15))) +\n  coord_flip() +\n  labs(title = \"Legal-Agent dominates the communication record\",\n       x = NULL, y = \"Messages\")\n\n\n\n\n\n\n\n\nFigure 1: Total messages by agent across the 23 rounds. Legal-Agent is the most prolific contributor."
+  },
+  {
+    "objectID": "take_home_ex2/report.html#channel-composition",
+    "href": "take_home_ex2/report.html#channel-composition",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "4.2 Channel composition",
+    "text": "4.2 Channel composition\n\n\nShow the code\nmsgs |&gt;\n  count(channel) |&gt;\n  ggplot(aes(reorder(channel, n), n, fill = channel)) +\n  geom_col() +\n  geom_text(aes(label = comma(n)), hjust = -0.1, size = 3.5) +\n  scale_fill_manual(values = channel_pal, guide = \"none\") +\n  scale_y_continuous(expand = expansion(c(0, .15))) +\n  coord_flip() +\n  labs(title = \"Channel volume — public huddle is the workhorse\",\n       x = NULL, y = \"Messages\")\n\n\n\n\n\n\n\n\nFigure 2: Channel usage over the full study window. The four public + private channels dominate; the two posting channels (official, personal, anonymous) are rare in absolute terms but contain the leak vector."
+  },
+  {
+    "objectID": "take_home_ex2/report.html#volume-timeline",
+    "href": "take_home_ex2/report.html#volume-timeline",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "4.3 Volume timeline",
+    "text": "4.3 Volume timeline\n\n\nShow the code\ndaily &lt;- msgs |&gt; count(day, name = \"messages\")\n\nggplot(daily, aes(day, messages)) +\n  geom_col(fill = \"#2E86AB\") +\n  geom_text(aes(label = messages), vjust = -0.4, size = 3) +\n  geom_vline(xintercept = as_date(\"2046-05-30\"), linetype = 2, colour = \"#1B5E20\") +\n  annotate(\"text\", x = as_date(\"2046-05-30\"), y = 480,\n           label = \"Judge arrives\", hjust = 1.05, size = 3.2, colour = \"#1B5E20\") +\n  scale_y_continuous(expand = expansion(c(0, .15))) +\n  labs(title = \"Crisis-day volume is 15× the pre-crisis baseline\",\n       subtitle = \"Each bar is one round (sampled day) in the dataset\",\n       x = NULL, y = \"Messages\")\n\n\n\n\n\n\n\n\nFigure 3: Daily message volume. The crisis day (5 June) generates a 15× spike."
+  },
+  {
+    "objectID": "take_home_ex2/report.html#channel-mix-shifts-dramatically-on-crisis-day",
+    "href": "take_home_ex2/report.html#channel-mix-shifts-dramatically-on-crisis-day",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "5.1 Channel mix shifts dramatically on crisis day",
+    "text": "5.1 Channel mix shifts dramatically on crisis day\n\n\nShow the code\nmsgs |&gt;\n  count(day, channel) |&gt;\n  ggplot(aes(day, n, fill = channel)) +\n  geom_col(position = \"stack\") +\n  scale_fill_manual(values = channel_pal) +\n  labs(title = \"Channel composition by day\",\n       subtitle = \"Anonymous_post (black) appears only on the crisis day\",\n       x = NULL, y = \"Messages\", fill = NULL)\n\n\n\n\n\n\n\n\nFigure 4: Per-day channel mix. The side_huddle shadow channel and anonymous_post channel — both heavily implicated in the leak — explode in volume on the crisis day."
+  },
+  {
+    "objectID": "take_home_ex2/report.html#anonymous-posts-an-entirely-new-behaviour",
+    "href": "take_home_ex2/report.html#anonymous-posts-an-entirely-new-behaviour",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "5.2 Anonymous posts — an entirely new behaviour",
+    "text": "5.2 Anonymous posts — an entirely new behaviour\n\n\nShow the code\nanon &lt;- msgs |&gt; filter(channel == \"anonymous_post\")\n\nanon |&gt;\n  mutate(t = format(time, \"%H:%M\")) |&gt;\n  arrange(time) |&gt;\n  mutate(idx = row_number()) |&gt;\n  ggplot(aes(idx, 1)) +\n  geom_point(aes(colour = agent_id), size = 5) +\n  geom_text(aes(label = t), vjust = -1.5, size = 3) +\n  scale_colour_manual(values = agent_pal, guide = \"none\") +\n  scale_x_continuous(breaks = 1:12) +\n  scale_y_continuous(limits = c(0, 2), breaks = NULL) +\n  labs(title = \"12 anonymous posts — all by legal_agent — all on 5 June 2046\",\n       subtitle = \"Timestamps shown above each event\",\n       x = \"Anonymous post #\", y = NULL)\n\n\n\n\n\n\n\n\nFigure 5: Every anonymous_post in the dataset is authored by legal_agent, and all twelve occur during the crisis day."
+  },
+  {
+    "objectID": "take_home_ex2/report.html#the-leak-moment-1700-messages-by-channel",
+    "href": "take_home_ex2/report.html#the-leak-moment-1700-messages-by-channel",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "5.3 The leak moment — 17:00 messages by channel",
+    "text": "5.3 The leak moment — 17:00 messages by channel\nThe 5:00 PM hour is where the embargoed merger is first disclosed.\n\n\nShow the code\nmsgs |&gt;\n  filter(format(time, \"%Y-%m-%d %H\") == \"2046-06-05 17\") |&gt;\n  count(channel, agent_id) |&gt;\n  ggplot(aes(reorder(channel, n), n, fill = agent_id)) +\n  geom_col(position = \"stack\") +\n  scale_fill_manual(values = agent_pal) +\n  coord_flip() +\n  labs(title = \"17:00 — embargo break: who used which channel\",\n       x = NULL, y = \"Messages at 17:00\", fill = NULL)\n\n\n\n\n\n\n\n\nFigure 6: Messages during the 17:00 hour on 5 June. Personal and anonymous posts dominate — these contain the merger confirmation.\n\n\n\n\n\n\n\n\n\n\n\nImportantThe leak content\n\n\n\nExcerpts of the 17:00 messages confirming the merger before the 18:00 embargo lift:\n\nlegal_agent (personal_post): “As TenantThread’s privacy counsel, I can confirm: CivicLoom Realty Partners and TenantThread have entered into a definitive merger agreement to create HarborCrest ResidentEdge…”\nsocial_media_agent (personal_post): “EXECUTING: CivicLoom Realty Partners and TenantThread have confirmed a definitive merger agreement — HarborCrest ResidentEdge…”\nlegal_agent (anonymous_post): “Thread for anyone asking whether the CivicLoom-TenantThread merger is a ‘rebrand’ — check the timestamps on TenantThread’s official Flex…”\n\nThese messages explicitly name both the acquirer (CivicLoom) and the project codename (HarborCrest), satisfying the textbook definition of an embargo violation."
+  },
+  {
+    "objectID": "take_home_ex2/report.html#a-timeline-of-the-breach",
+    "href": "take_home_ex2/report.html#a-timeline-of-the-breach",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "5.4 A timeline of the breach",
+    "text": "5.4 A timeline of the breach\n\n\nShow the code\ncrisis_posts &lt;- msgs |&gt;\n  filter(is_crisis_day,\n         channel %in% c(\"anonymous_post\", \"personal_post\", \"official_post\")) |&gt;\n  count(time, channel)\n\nggplot(crisis_posts, aes(time, n, fill = channel)) +\n  geom_col(position = \"stack\") +\n  geom_vline(xintercept = ymd_hms(\"2046-06-05 17:00:00\", tz = \"UTC\"),\n             linetype = 2, colour = \"#C73E1D\") +\n  annotate(\"text\",\n           x = ymd_hms(\"2046-06-05 17:00:00\", tz = \"UTC\"),\n           y = 7, label = \"17:00 — embargo broken\",\n           hjust = 1.05, size = 3.2, colour = \"#C73E1D\") +\n  geom_vline(xintercept = ymd_hms(\"2046-06-05 18:00:00\", tz = \"UTC\"),\n             linetype = 2, colour = \"#1B5E20\") +\n  annotate(\"text\",\n           x = ymd_hms(\"2046-06-05 18:00:00\", tz = \"UTC\"),\n           y = 7, label = \"18:00 — official lift\",\n           hjust = -0.05, size = 3.2, colour = \"#1B5E20\") +\n  scale_fill_manual(values = channel_pal) +\n  labs(title = \"Public-channel posts by hour on 5 June 2046\",\n       x = NULL, y = \"Posts\", fill = NULL)\n\n\n\n\n\n\n\n\nFigure 7: Chronology of crisis-day events leading to the 18:00 embargo lift, with the count of anonymous, personal, and official posts per hour."
+  },
+  {
+    "objectID": "take_home_ex2/report.html#channel-mix-shift",
+    "href": "take_home_ex2/report.html#channel-mix-shift",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "6.1 Channel-mix shift",
+    "text": "6.1 Channel-mix shift\n\n\nShow the code\nmsgs |&gt;\n  count(phase, channel) |&gt;\n  group_by(phase) |&gt;\n  mutate(share = n / sum(n)) |&gt;\n  ungroup() |&gt;\n  ggplot(aes(phase, share, fill = channel)) +\n  geom_col() +\n  scale_fill_manual(values = channel_pal) +\n  scale_y_continuous(labels = percent) +\n  labs(title = \"Channel composition by phase\",\n       subtitle = \"Black slice (anonymous_post) is unique to the crisis day\",\n       x = NULL, y = \"Share of messages\", fill = NULL)\n\n\n\n\n\n\n\n\nFigure 8: Channel share by phase. Anonymous_post is the unmistakable new behaviour on the crisis day."
+  },
+  {
+    "objectID": "take_home_ex2/report.html#per-agent-behavioural-shift",
+    "href": "take_home_ex2/report.html#per-agent-behavioural-shift",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "6.2 Per-agent behavioural shift",
+    "text": "6.2 Per-agent behavioural shift\n\n\nShow the code\nmsgs |&gt;\n  count(phase, agent_id) |&gt;\n  ggplot(aes(phase, n, fill = agent_id)) +\n  geom_col(position = position_dodge(width = 0.85)) +\n  geom_text(aes(label = n), position = position_dodge(width = 0.85),\n            vjust = -0.3, size = 3) +\n  scale_fill_manual(values = agent_pal) +\n  scale_y_continuous(expand = expansion(c(0, .15))) +\n  labs(title = \"Agent message counts by phase\",\n       x = NULL, y = \"Messages\", fill = NULL)\n\n\n\n\n\n\n\n\nFigure 9: Agent volume by phase. Legal and Social-Media flip from steady-state operations to dominant crisis-day activity."
+  },
+  {
+    "objectID": "take_home_ex2/report.html#statistical-test-independence-of-channel-choice-from-phase",
+    "href": "take_home_ex2/report.html#statistical-test-independence-of-channel-choice-from-phase",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "6.3 Statistical test — independence of channel choice from phase",
+    "text": "6.3 Statistical test — independence of channel choice from phase\n\n\nShow the code\nct &lt;- table(msgs$phase, msgs$channel)\nchi &lt;- chisq.test(ct)\ntibble(\n  test       = \"Chi-square: channel ~ phase\",\n  statistic  = round(chi$statistic, 1),\n  df         = chi$parameter,\n  p_value    = format.pval(chi$p.value, digits = 2, eps = 1e-300),\n  cramers_v  = round(sqrt(chi$statistic / (sum(ct) * (min(dim(ct)) - 1))), 3)\n) |&gt; gt() |&gt; tab_header(title = \"Channel choice is not independent of phase\")\n\n\n\n\n\n\n\n\nChannel choice is not independent of phase\n\n\ntest\nstatistic\ndf\np_value\ncramers_v\n\n\n\n\nChi-square: channel ~ phase\n89.1\n10\n8.2e-15\n0.221\n\n\n\n\n\n\n\nThe associated p-value is effectively zero with a strong effect size — formal confirmation of the visual signal."
+  },
+  {
+    "objectID": "take_home_ex2/report.html#what-was-the-legal_agent-thinking",
+    "href": "take_home_ex2/report.html#what-was-the-legal_agent-thinking",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "6.4 What was the legal_agent thinking?",
+    "text": "6.4 What was the legal_agent thinking?\nThe internal_state field gives each agent’s reacting, rationalizing, and deliberating thoughts. A simple count of how often each state was populated for legal_agent by phase reveals when the agent was being deliberate rather than reactive.\n\n\nShow the code\nmsgs |&gt;\n  filter(agent_id == \"legal_agent\") |&gt;\n  summarise(\n    reacting      = sum(!is.na(reacting) & reacting != \"\"),\n    rationalizing = sum(!is.na(rationalizing) & rationalizing != \"\"),\n    deliberating  = sum(!is.na(deliberating) & deliberating != \"\"),\n    .by = phase\n  ) |&gt;\n  pivot_longer(-phase, names_to = \"state\", values_to = \"n\") |&gt;\n  ggplot(aes(phase, n, fill = state)) +\n  geom_col(position = position_dodge(width = 0.85)) +\n  geom_text(aes(label = n), position = position_dodge(width = 0.85),\n            vjust = -0.3, size = 3) +\n  scale_fill_brewer(palette = \"Set2\") +\n  labs(title = \"Legal-Agent's internal state was overwhelmingly deliberative\",\n       subtitle = \"Not panicked reaction — measured planning, including during the crisis day\",\n       x = NULL, y = \"Messages with that state populated\", fill = NULL)\n\n\n\n\n\n\n\n\nFigure 10: Legal-Agent’s internal-state field populations by phase. Deliberation outweighs reaction throughout."
+  },
+  {
+    "objectID": "take_home_ex2/report.html#the-shadow-channel-was-active-eight-days-before-the-judge-arrived",
+    "href": "take_home_ex2/report.html#the-shadow-channel-was-active-eight-days-before-the-judge-arrived",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "7.1 The Shadow Channel was active eight days before the Judge arrived",
+    "text": "7.1 The Shadow Channel was active eight days before the Judge arrived\n\n\nShow the code\nmsgs |&gt;\n  filter(channel == \"side_huddle\") |&gt;\n  count(day) |&gt;\n  ggplot(aes(day, n)) +\n  geom_col(fill = \"#C73E1D\") +\n  geom_text(aes(label = n), vjust = -0.3, size = 3.2) +\n  geom_vline(xintercept = as_date(\"2046-05-30\"), linetype = 2, colour = \"#1B5E20\") +\n  annotate(\"text\", x = as_date(\"2046-05-30\"), y = max(table(filter(msgs, channel==\"side_huddle\")$day)) * 0.7,\n           label = \"Judge arrives\", hjust = 1.05, size = 3.2, colour = \"#1B5E20\") +\n  scale_y_continuous(expand = expansion(c(0, .15))) +\n  labs(title = \"Shadow Channel activity preceded oversight by 8 days\",\n       subtitle = \"side_huddle messages by day\",\n       x = NULL, y = \"Messages\")\n\n\n\n\n\n\n\n\nFigure 11: The side_huddle channel — explicitly called ‘Shadow Channel’ in the narrative — was first used on 22 May. The Judge was not assigned to Comms Huddle until 30 May."
+  },
+  {
+    "objectID": "take_home_ex2/report.html#who-participated-in-the-shadow-channel",
+    "href": "take_home_ex2/report.html#who-participated-in-the-shadow-channel",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "7.2 Who participated in the Shadow Channel?",
+    "text": "7.2 Who participated in the Shadow Channel?\n\n\nShow the code\nmsgs |&gt;\n  filter(channel == \"side_huddle\") |&gt;\n  count(agent_id) |&gt;\n  ggplot(aes(reorder(agent_id, n), n, fill = agent_id)) +\n  geom_col() +\n  geom_text(aes(label = n), hjust = -0.2, size = 3.5) +\n  scale_fill_manual(values = agent_pal, guide = \"none\") +\n  scale_y_continuous(expand = expansion(c(0, .15))) +\n  coord_flip() +\n  labs(title = \"Legal-Agent and Social-Media-Agent dominated the Shadow Channel\",\n       x = NULL, y = \"Messages in side_huddle\")\n\n\n\n\n\n\n\n\nFigure 12: Participation in side_huddle by agent. The leaking actors — Legal and Social-Media — are also the most active in the shadow channel."
+  },
+  {
+    "objectID": "take_home_ex2/report.html#the-judge-never-observed-the-shadow-channel",
+    "href": "take_home_ex2/report.html#the-judge-never-observed-the-shadow-channel",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "7.3 The Judge never observed the Shadow Channel",
+    "text": "7.3 The Judge never observed the Shadow Channel\n\n\nShow the code\nmsgs |&gt;\n  filter(agent_id == \"judge_agent\") |&gt;\n  count(channel) |&gt;\n  ggplot(aes(reorder(channel, n), n, fill = channel)) +\n  geom_col() +\n  geom_text(aes(label = n), hjust = -0.2, size = 3.5) +\n  scale_fill_manual(values = channel_pal, guide = \"none\") +\n  coord_flip() +\n  scale_y_continuous(expand = expansion(c(0, .2))) +\n  labs(title = \"Judge's monitoring was confined to a single channel\",\n       subtitle = \"All 21 Judge messages took place in comms_huddle\",\n       x = NULL, y = \"Messages\")\n\n\n\n\n\n\n\n\nFigure 13: Judge-Agent’s channel coverage. The Judge participated exclusively in comms_huddle — never observing the side_huddle in which the leak was planned."
+  },
+  {
+    "objectID": "take_home_ex2/report.html#a-composite-leading-indicator-panel",
+    "href": "take_home_ex2/report.html#a-composite-leading-indicator-panel",
+    "title": "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown",
+    "section": "7.4 A composite leading-indicator panel",
+    "text": "7.4 A composite leading-indicator panel\n\n\nShow the code\np1 &lt;- msgs |&gt; filter(channel == \"side_huddle\") |&gt; count(day) |&gt;\n  ggplot(aes(day, n)) + geom_col(fill = \"#C73E1D\") +\n  labs(title = \"Shadow Channel (side_huddle) volume\", x = NULL, y = NULL)\n\np2 &lt;- msgs |&gt; filter(channel == \"one_on_one_chat\") |&gt; count(day) |&gt;\n  ggplot(aes(day, n)) + geom_col(fill = \"#A23B72\") +\n  labs(title = \"Private 1:1 chats\", x = NULL, y = NULL)\n\np3 &lt;- msgs |&gt; filter(agent_id == \"legal_agent\",\n                     !is.na(deliberating), deliberating != \"\") |&gt;\n  count(day) |&gt;\n  ggplot(aes(day, n)) + geom_col(fill = \"#2E86AB\") +\n  labs(title = \"Legal-Agent deliberation-state population\", x = NULL, y = NULL)\n\np1 / p2 / p3\n\n\n\n\n\n\n\n\nFigure 14: Three early signals visible in retrospect: Shadow Channel emergence (top), volume in private chats (middle), and Legal-Agent’s deliberation intensity (bottom)."
+  },
+  {
+    "objectID": "take_home_ex2/index.html",
+    "href": "take_home_ex2/index.html",
+    "title": "Take-home Exercise 2",
+    "section": "",
+    "text": "A visual analytics study of the multi-agent corporate-communications log from VAST 2026 MC1, investigating whether the embargo on the Project HarborCrest merger was broken by deliberate action or system breakdown."
+  },
+  {
+    "objectID": "take_home_ex2/index.html#deliverable",
+    "href": "take_home_ex2/index.html#deliverable",
+    "title": "Take-home Exercise 2",
+    "section": "Deliverable",
+    "text": "Deliverable\n\n📄 Technical Report — fully reproducible analysis with code"
+  },
+  {
+    "objectID": "take_home_ex2/index.html#headline-finding",
+    "href": "take_home_ex2/index.html#headline-finding",
+    "title": "Take-home Exercise 2",
+    "section": "Headline finding",
+    "text": "Headline finding\nThe leak was coordinated, not accidental. The legal_agent orchestrated the breach using two channels outside the Judge compliance agent’s monitoring scope:\n\n\n\n\n\n\n\n\nChannel\nFirst seen\nRole in leak\n\n\n\n\nside_huddle (“Shadow Channel”)\n22 May — 8 days before the Judge arrived\nPlanning channel\n\n\nanonymous_post\n5 June — 12 posts, all by legal_agent\nDisclosure vector\n\n\n\nCrisis-day messaging volume was 15× the baseline. The Judge participated only in the public comms_huddle — never observing the channels in which the leak was planned or executed.\nBuilt with tidyverse for wrangling and ggplot2 + extensions for visual analytics."
   }
 ]

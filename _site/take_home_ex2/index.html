@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Take-home Exercise 1 – ISSS608-VAA</title>
+<title>Take-home Exercise 2 – ISSS608-VAA</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -167,8 +167,8 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Take-home Exercise 1</h1>
-<p class="subtitle lead">Visual Analytics on a Motor Insurance Portfolio</p>
+<h1 class="title">Take-home Exercise 2</h1>
+<p class="subtitle lead">VAST 2026 MC1 — TenantThread communications crisis</p>
 </div>
 
 
@@ -185,51 +185,44 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<p>A visual analytics study of a Spanish motor insurance portfolio (354,140 policy-years, 2022–2024).</p>
-<section id="deliverables" class="level2">
-<h2 class="anchored" data-anchor-id="deliverables">Deliverables</h2>
+<p>A visual analytics study of the multi-agent corporate-communications log from VAST 2026 MC1, investigating whether the embargo on the <em>Project HarborCrest</em> merger was broken by deliberate action or system breakdown.</p>
+<section id="deliverable" class="level2">
+<h2 class="anchored" data-anchor-id="deliverable">Deliverable</h2>
 <ul>
-<li>📊 <a href="presentation.html"><strong>Executive Summary (revealjs)</strong></a> — 15-slide presentation with speaker notes</li>
-<li>📄 <a href="report.html"><strong>Technical Report (HTML)</strong></a> — fully reproducible analysis with code</li>
+<li>📄 <a href="report.html"><strong>Technical Report</strong></a> — fully reproducible analysis with code</li>
 </ul>
 </section>
-<section id="tldr" class="level2">
-<h2 class="anchored" data-anchor-id="tldr">TL;DR</h2>
+<section id="headline-finding" class="level2">
+<h2 class="anchored" data-anchor-id="headline-finding">Headline finding</h2>
+<p>The leak was <strong>coordinated, not accidental</strong>. The <code>legal_agent</code> orchestrated the breach using two channels outside the Judge compliance agent’s monitoring scope:</p>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 50%">
-<col style="width: 50%">
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
 </colgroup>
 <thead>
 <tr class="header">
-<th>Finding</th>
-<th>Evidence</th>
+<th>Channel</th>
+<th>First seen</th>
+<th>Role in leak</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Portfolio LR deteriorated <strong>65.6% → 74.7%</strong> in 2 years</td>
-<td>Aggregated LR by underwriting year</td>
+<td><code>side_huddle</code> (“Shadow Channel”)</td>
+<td><strong>22 May</strong> — 8 days before the Judge arrived</td>
+<td>Planning channel</td>
 </tr>
 <tr class="even">
-<td><strong>Comp. (basic) at 93.9% LR</strong> is the prime under-performer</td>
-<td>LR by policy type</td>
-</tr>
-<tr class="odd">
-<td><strong>Diesel runs 9 pp above gasoline</strong></td>
-<td>LR by fuel type, χ² p &lt; 0.001</td>
-</tr>
-<tr class="even">
-<td><strong>Top 5% of policies = 83% of losses</strong></td>
-<td>Loss concentration curve</td>
-</tr>
-<tr class="odd">
-<td>Semi-annual / quarterly payers signal <strong>adverse selection</strong></td>
-<td>LR by payment frequency</td>
+<td><code>anonymous_post</code></td>
+<td><strong>5 June</strong> — 12 posts, all by legal_agent</td>
+<td>Disclosure vector</td>
 </tr>
 </tbody>
 </table>
-<p>Built with <code>tidyverse</code> for wrangling and <code>ggplot2</code> + extensions (<code>ggridges</code>, <code>ggdist</code>, <code>ggstatsplot</code>, <code>patchwork</code>) for visual analytics.</p>
+<p>Crisis-day messaging volume was <strong>15× the baseline</strong>. The Judge participated only in the public <code>comms_huddle</code> — never observing the channels in which the leak was planned or executed.</p>
+<p>Built with <code>tidyverse</code> for wrangling and <code>ggplot2</code> + extensions for visual analytics.</p>
 
 
 </section>

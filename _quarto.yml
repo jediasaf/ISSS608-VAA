@@ -31,6 +31,10 @@ website:
             href: take_home_ex1/report.qmd
           - text: "  ↳ Executive Summary (slides)"
             href: take_home_ex1/presentation.qmd
+          - text: "Take-home Exercise 2: TenantThread Crisis Analysis"
+            href: take_home_ex2/index.qmd
+          - text: "  ↳ Technical Report"
+            href: take_home_ex2/report.qmd
 
       - href: about.qmd
         text: About
