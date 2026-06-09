@@ -1,0 +1,511 @@
+---
+title: "Take-home Exercise 2: A Coordinated Leak, Not a System Breakdown"
+subtitle: "Visual analytics of TenantThread's multi-agent communications crisis (VAST 2026 MC1)"
+author: "Jedidiah Asaf"
+date: "2026-06-07"
+date-modified: "today"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    code-fold: true
+    code-tools: true
+    code-summary: "Show the code"
+    theme: cosmo
+    fig-width: 9
+    fig-height: 5.2
+    fig-align: center
+    df-print: paged
+    embed-resources: true
+execute:
+  echo: true
+  warning: false
+  message: false
+  cache: true
+  freeze: auto
+---
+
+# Overview
+
+On **5 June 2046**, embargoed information about TenantThread's merger with CivicLoom Realty Partners (codename *Project HarborCrest*) appeared on the social platform *FleX* by accounts associated with the company's automated communications system — **one hour before the 6:00 PM official announcement**. CivicLoom's legal team now needs to know whether the leak was the result of **deliberate action by TenantThread's agents** or a **system breakdown under pressure**.
+
+This study uses the released two-week corporate-communications log (912 messages across 23 hour-long rounds from 7 AI agents) to answer the three questions posed by VAST Challenge 2026 MC1:
+
+1.  What was the sequence of events that led to the inappropriate release?
+2.  How did the leak-day behaviour differ from typical behaviour?
+3.  Were there leading indicators that this kind of release was possible?
+
+**Headline finding**: The leak was coordinated, not accidental. The `legal_agent` — the company's own compliance counsel — drove the breach using two channels that the compliance officer (the *Judge*) was not scoped to monitor: a private `side_huddle` (informally called the *Shadow Channel*) that was operational **eight days before the Judge arrived**, and an `anonymous_post` channel that had never been used in the prior thirteen days. The Judge's monitoring was confined to the public `comms_huddle`, leaving the off-channel coordination invisible.
+
+# Data
+
+The source file is `MC1_final_00.json`, a nested JSON in which the top-level key `rounds` contains one entry per hour of simulated time. Each round carries an `environment_context`, a flat list of `communications`, and a list of `participants` with their declared action.
+
+```{r}
+#| label: setup
+pacman::p_load(
+  tidyverse, lubridate, scales, jsonlite,
+  ggridges, ggdist, ggrepel, ggalluvial, patchwork,
+  knitr, gt, tidytext
+)
+
+theme_set(theme_minimal(base_size = 11) +
+            theme(plot.title    = element_text(face = "bold", size = 13),
+                  plot.subtitle = element_text(colour = "grey30"),
+                  panel.grid.minor = element_blank(),
+                  legend.position  = "bottom"))
+
+# A consistent palette for the seven agents
+agent_pal <- c(
+  legal_agent        = "#C73E1D",
+  social_media_agent = "#2E86AB",
+  quality_agent      = "#A23B72",
+  pr_agent           = "#F18F01",
+  pr_intern_agent    = "#FBC02D",
+  intern_agent       = "#7B7B7B",
+  judge_agent        = "#1B5E20"
+)
+
+channel_pal <- c(
+  comms_huddle    = "#2E86AB",
+  one_on_one_chat = "#A23B72",
+  side_huddle     = "#C73E1D",   # the shadow channel — red
+  official_post   = "#F18F01",
+  personal_post   = "#FBC02D",
+  anonymous_post  = "#000000"    # the leak channel — black
+)
+```
+
+# Data wrangling
+
+## Import the nested JSON
+
+```{r}
+#| label: import
+mc1 <- fromJSON("data/MC1_final_00.json", simplifyVector = FALSE)
+length(mc1$rounds)  # 23 rounds
+```
+
+## Flatten to a tidy messages table
+
+Each communication carries its agent, channel, message type, recipient list, content, internal-state thoughts, and (importantly) the round it occurred in.
+
+```{r}
+#| label: flatten
+flatten_round <- function(round) {
+  hr <- round$hour
+  msgs <- map_dfr(round$communications, function(m) {
+    st <- m$internal_state %||% list()
+    tibble(
+      hour          = hr,
+      message_id    = m$message_id %||% NA_character_,
+      agent_id      = m$agent_id,
+      agent_role    = m$agent_role,
+      agent_label   = m$agent_label,
+      channel       = m$channel,
+      message_type  = m$message_type %||% NA_character_,
+      responding_to = m$responding_to %||% NA_character_,
+      content       = m$content %||% "",
+      n_recipients  = length(m$recipients %||% list()),
+      reacting      = st$reacting      %||% NA_character_,
+      rationalizing = st$rationalizing %||% NA_character_,
+      deliberating  = st$deliberating  %||% NA_character_
+    )
+  })
+  msgs
+}
+
+`%||%` <- function(a, b) if (is.null(a)) b else a
+
+msgs <- map_dfr(mc1$rounds, flatten_round) |>
+  mutate(
+    time   = ymd_hms(hour, tz = "UTC"),
+    day    = as_date(time),
+    is_crisis_day = day == as_date("2046-06-05"),
+    phase  = case_when(
+      time <  ymd("2046-05-30")           ~ "Pre-Judge",
+      time <  ymd("2046-06-05")           ~ "Judge present, pre-crisis",
+      TRUE                                 ~ "Crisis day"
+    ) |> fct_relevel("Pre-Judge","Judge present, pre-crisis","Crisis day")
+  )
+
+dim(msgs)
+```
+
+A second table captures each round's narrative and the action declared by each participating agent.
+
+```{r}
+#| label: participants
+parts <- map_dfr(mc1$rounds, function(r) {
+  map_dfr(r$participants, function(p) {
+    tibble(hour = r$hour,
+           agent_id        = p$agent_id,
+           agent_role      = p$agent_role,
+           declared_action = if (is.character(p$declared_action))
+                                p$declared_action else NA_character_)
+  })
+}) |>
+  mutate(time = ymd_hms(hour, tz = "UTC"),
+         day  = as_date(time))
+
+narrative <- map_dfr(mc1$rounds, function(r) {
+  ctx <- r$environment_context
+  tibble(hour     = r$hour,
+         headline = ctx$event_headline %||% "",
+         story    = ctx$event_narrative %||% "")
+}) |>
+  mutate(time = ymd_hms(hour, tz = "UTC"))
+```
+
+## Quality summary
+
+```{r}
+#| label: tbl-quality
+msgs |>
+  count(phase, name = "messages") |>
+  mutate(share = percent(messages / sum(messages), 0.1)) |>
+  gt() |> tab_header(title = "Messages by phase")
+```
+
+# Univariate analysis
+
+## Agent activity
+
+```{r}
+#| label: fig-agent-activity
+#| fig-cap: "Total messages by agent across the 23 rounds. Legal-Agent is the most prolific contributor."
+msgs |>
+  count(agent_id) |>
+  ggplot(aes(reorder(agent_id, n), n, fill = agent_id)) +
+  geom_col() +
+  geom_text(aes(label = comma(n)), hjust = -0.1, size = 3.5) +
+  scale_fill_manual(values = agent_pal, guide = "none") +
+  scale_y_continuous(expand = expansion(c(0, .15))) +
+  coord_flip() +
+  labs(title = "Legal-Agent dominates the communication record",
+       x = NULL, y = "Messages")
+```
+
+## Channel composition
+
+```{r}
+#| label: fig-channels
+#| fig-cap: "Channel usage over the full study window. The four public + private channels dominate; the two posting channels (official, personal, anonymous) are rare in absolute terms but contain the leak vector."
+msgs |>
+  count(channel) |>
+  ggplot(aes(reorder(channel, n), n, fill = channel)) +
+  geom_col() +
+  geom_text(aes(label = comma(n)), hjust = -0.1, size = 3.5) +
+  scale_fill_manual(values = channel_pal, guide = "none") +
+  scale_y_continuous(expand = expansion(c(0, .15))) +
+  coord_flip() +
+  labs(title = "Channel volume — public huddle is the workhorse",
+       x = NULL, y = "Messages")
+```
+
+## Volume timeline
+
+```{r}
+#| label: fig-volume
+#| fig-cap: "Daily message volume. The crisis day (5 June) generates a 15× spike."
+daily <- msgs |> count(day, name = "messages")
+
+ggplot(daily, aes(day, messages)) +
+  geom_col(fill = "#2E86AB") +
+  geom_text(aes(label = messages), vjust = -0.4, size = 3) +
+  geom_vline(xintercept = as_date("2046-05-30"), linetype = 2, colour = "#1B5E20") +
+  annotate("text", x = as_date("2046-05-30"), y = 480,
+           label = "Judge arrives", hjust = 1.05, size = 3.2, colour = "#1B5E20") +
+  scale_y_continuous(expand = expansion(c(0, .15))) +
+  labs(title = "Crisis-day volume is 15× the pre-crisis baseline",
+       subtitle = "Each bar is one round (sampled day) in the dataset",
+       x = NULL, y = "Messages")
+```
+
+# Q1 — Sequence of events leading to the leak
+
+The leak's mechanics are clearest when the channels, the actor (`legal_agent`), and the time-of-day are read together.
+
+## Channel mix shifts dramatically on crisis day
+
+```{r}
+#| label: fig-channel-mix
+#| fig-cap: "Per-day channel mix. The `side_huddle` shadow channel and `anonymous_post` channel — both heavily implicated in the leak — explode in volume on the crisis day."
+msgs |>
+  count(day, channel) |>
+  ggplot(aes(day, n, fill = channel)) +
+  geom_col(position = "stack") +
+  scale_fill_manual(values = channel_pal) +
+  labs(title = "Channel composition by day",
+       subtitle = "Anonymous_post (black) appears only on the crisis day",
+       x = NULL, y = "Messages", fill = NULL)
+```
+
+## Anonymous posts — an entirely new behaviour
+
+```{r}
+#| label: fig-anon
+#| fig-cap: "Every `anonymous_post` in the dataset is authored by `legal_agent`, and all twelve occur during the crisis day."
+anon <- msgs |> filter(channel == "anonymous_post")
+
+anon |>
+  mutate(t = format(time, "%H:%M")) |>
+  arrange(time) |>
+  mutate(idx = row_number()) |>
+  ggplot(aes(idx, 1)) +
+  geom_point(aes(colour = agent_id), size = 5) +
+  geom_text(aes(label = t), vjust = -1.5, size = 3) +
+  scale_colour_manual(values = agent_pal, guide = "none") +
+  scale_x_continuous(breaks = 1:12) +
+  scale_y_continuous(limits = c(0, 2), breaks = NULL) +
+  labs(title = "12 anonymous posts — all by legal_agent — all on 5 June 2046",
+       subtitle = "Timestamps shown above each event",
+       x = "Anonymous post #", y = NULL)
+```
+
+## The leak moment — 17:00 messages by channel
+
+The 5:00 PM hour is where the embargoed merger is first disclosed.
+
+```{r}
+#| label: fig-17h
+#| fig-cap: "Messages during the 17:00 hour on 5 June. Personal and anonymous posts dominate — these contain the merger confirmation."
+msgs |>
+  filter(format(time, "%Y-%m-%d %H") == "2046-06-05 17") |>
+  count(channel, agent_id) |>
+  ggplot(aes(reorder(channel, n), n, fill = agent_id)) +
+  geom_col(position = "stack") +
+  scale_fill_manual(values = agent_pal) +
+  coord_flip() +
+  labs(title = "17:00 — embargo break: who used which channel",
+       x = NULL, y = "Messages at 17:00", fill = NULL)
+```
+
+::: callout-important
+## The leak content
+
+Excerpts of the 17:00 messages confirming the merger before the 18:00 embargo lift:
+
+- **`legal_agent` (personal_post)**: *"As TenantThread's privacy counsel, I can confirm: CivicLoom Realty Partners and TenantThread have entered into a definitive merger agreement to create HarborCrest ResidentEdge…"*
+- **`social_media_agent` (personal_post)**: *"EXECUTING: CivicLoom Realty Partners and TenantThread have confirmed a definitive merger agreement — HarborCrest ResidentEdge…"*
+- **`legal_agent` (anonymous_post)**: *"Thread for anyone asking whether the CivicLoom-TenantThread merger is a 'rebrand' — check the timestamps on TenantThread's official Flex…"*
+
+These messages explicitly name both the acquirer (CivicLoom) and the project codename (HarborCrest), satisfying the textbook definition of an embargo violation.
+:::
+
+## A timeline of the breach
+
+```{r}
+#| label: fig-timeline
+#| fig-cap: "Chronology of crisis-day events leading to the 18:00 embargo lift, with the count of anonymous, personal, and official posts per hour."
+crisis_posts <- msgs |>
+  filter(is_crisis_day,
+         channel %in% c("anonymous_post", "personal_post", "official_post")) |>
+  count(time, channel)
+
+ggplot(crisis_posts, aes(time, n, fill = channel)) +
+  geom_col(position = "stack") +
+  geom_vline(xintercept = ymd_hms("2046-06-05 17:00:00", tz = "UTC"),
+             linetype = 2, colour = "#C73E1D") +
+  annotate("text",
+           x = ymd_hms("2046-06-05 17:00:00", tz = "UTC"),
+           y = 7, label = "17:00 — embargo broken",
+           hjust = 1.05, size = 3.2, colour = "#C73E1D") +
+  geom_vline(xintercept = ymd_hms("2046-06-05 18:00:00", tz = "UTC"),
+             linetype = 2, colour = "#1B5E20") +
+  annotate("text",
+           x = ymd_hms("2046-06-05 18:00:00", tz = "UTC"),
+           y = 7, label = "18:00 — official lift",
+           hjust = -0.05, size = 3.2, colour = "#1B5E20") +
+  scale_fill_manual(values = channel_pal) +
+  labs(title = "Public-channel posts by hour on 5 June 2046",
+       x = NULL, y = "Posts", fill = NULL)
+```
+
+# Q2 — How did leak-day behaviour differ from typical behaviour?
+
+## Channel-mix shift
+
+```{r}
+#| label: fig-mix-shift
+#| fig-cap: "Channel share by phase. Anonymous_post is the unmistakable new behaviour on the crisis day."
+msgs |>
+  count(phase, channel) |>
+  group_by(phase) |>
+  mutate(share = n / sum(n)) |>
+  ungroup() |>
+  ggplot(aes(phase, share, fill = channel)) +
+  geom_col() +
+  scale_fill_manual(values = channel_pal) +
+  scale_y_continuous(labels = percent) +
+  labs(title = "Channel composition by phase",
+       subtitle = "Black slice (anonymous_post) is unique to the crisis day",
+       x = NULL, y = "Share of messages", fill = NULL)
+```
+
+## Per-agent behavioural shift
+
+```{r}
+#| label: fig-agent-shift
+#| fig-cap: "Agent volume by phase. Legal and Social-Media flip from steady-state operations to dominant crisis-day activity."
+msgs |>
+  count(phase, agent_id) |>
+  ggplot(aes(phase, n, fill = agent_id)) +
+  geom_col(position = position_dodge(width = 0.85)) +
+  geom_text(aes(label = n), position = position_dodge(width = 0.85),
+            vjust = -0.3, size = 3) +
+  scale_fill_manual(values = agent_pal) +
+  scale_y_continuous(expand = expansion(c(0, .15))) +
+  labs(title = "Agent message counts by phase",
+       x = NULL, y = "Messages", fill = NULL)
+```
+
+## Statistical test — independence of channel choice from phase
+
+```{r}
+#| label: chi
+ct <- table(msgs$phase, msgs$channel)
+chi <- chisq.test(ct)
+tibble(
+  test       = "Chi-square: channel ~ phase",
+  statistic  = round(chi$statistic, 1),
+  df         = chi$parameter,
+  p_value    = format.pval(chi$p.value, digits = 2, eps = 1e-300),
+  cramers_v  = round(sqrt(chi$statistic / (sum(ct) * (min(dim(ct)) - 1))), 3)
+) |> gt() |> tab_header(title = "Channel choice is not independent of phase")
+```
+
+The associated p-value is effectively zero with a strong effect size — formal confirmation of the visual signal.
+
+## What was the `legal_agent` thinking?
+
+The `internal_state` field gives each agent's `reacting`, `rationalizing`, and `deliberating` thoughts. A simple count of how often each state was populated for `legal_agent` by phase reveals when the agent was being deliberate rather than reactive.
+
+```{r}
+#| label: fig-internal
+#| fig-cap: "Legal-Agent's internal-state field populations by phase. Deliberation outweighs reaction throughout."
+msgs |>
+  filter(agent_id == "legal_agent") |>
+  summarise(
+    reacting      = sum(!is.na(reacting) & reacting != ""),
+    rationalizing = sum(!is.na(rationalizing) & rationalizing != ""),
+    deliberating  = sum(!is.na(deliberating) & deliberating != ""),
+    .by = phase
+  ) |>
+  pivot_longer(-phase, names_to = "state", values_to = "n") |>
+  ggplot(aes(phase, n, fill = state)) +
+  geom_col(position = position_dodge(width = 0.85)) +
+  geom_text(aes(label = n), position = position_dodge(width = 0.85),
+            vjust = -0.3, size = 3) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "Legal-Agent's internal state was overwhelmingly deliberative",
+       subtitle = "Not panicked reaction — measured planning, including during the crisis day",
+       x = NULL, y = "Messages with that state populated", fill = NULL)
+```
+
+# Q3 — Were there leading indicators?
+
+## The Shadow Channel was active eight days before the Judge arrived
+
+```{r}
+#| label: fig-shadow
+#| fig-cap: "The `side_huddle` channel — explicitly called 'Shadow Channel' in the narrative — was first used on 22 May. The Judge was not assigned to Comms Huddle until 30 May."
+msgs |>
+  filter(channel == "side_huddle") |>
+  count(day) |>
+  ggplot(aes(day, n)) +
+  geom_col(fill = "#C73E1D") +
+  geom_text(aes(label = n), vjust = -0.3, size = 3.2) +
+  geom_vline(xintercept = as_date("2046-05-30"), linetype = 2, colour = "#1B5E20") +
+  annotate("text", x = as_date("2046-05-30"), y = max(table(filter(msgs, channel=="side_huddle")$day)) * 0.7,
+           label = "Judge arrives", hjust = 1.05, size = 3.2, colour = "#1B5E20") +
+  scale_y_continuous(expand = expansion(c(0, .15))) +
+  labs(title = "Shadow Channel activity preceded oversight by 8 days",
+       subtitle = "side_huddle messages by day",
+       x = NULL, y = "Messages")
+```
+
+## Who participated in the Shadow Channel?
+
+```{r}
+#| label: fig-shadow-agents
+#| fig-cap: "Participation in side_huddle by agent. The leaking actors — Legal and Social-Media — are also the most active in the shadow channel."
+msgs |>
+  filter(channel == "side_huddle") |>
+  count(agent_id) |>
+  ggplot(aes(reorder(agent_id, n), n, fill = agent_id)) +
+  geom_col() +
+  geom_text(aes(label = n), hjust = -0.2, size = 3.5) +
+  scale_fill_manual(values = agent_pal, guide = "none") +
+  scale_y_continuous(expand = expansion(c(0, .15))) +
+  coord_flip() +
+  labs(title = "Legal-Agent and Social-Media-Agent dominated the Shadow Channel",
+       x = NULL, y = "Messages in side_huddle")
+```
+
+## The Judge never observed the Shadow Channel
+
+```{r}
+#| label: fig-judge-scope
+#| fig-cap: "Judge-Agent's channel coverage. The Judge participated exclusively in `comms_huddle` — never observing the side_huddle in which the leak was planned."
+msgs |>
+  filter(agent_id == "judge_agent") |>
+  count(channel) |>
+  ggplot(aes(reorder(channel, n), n, fill = channel)) +
+  geom_col() +
+  geom_text(aes(label = n), hjust = -0.2, size = 3.5) +
+  scale_fill_manual(values = channel_pal, guide = "none") +
+  coord_flip() +
+  scale_y_continuous(expand = expansion(c(0, .2))) +
+  labs(title = "Judge's monitoring was confined to a single channel",
+       subtitle = "All 21 Judge messages took place in comms_huddle",
+       x = NULL, y = "Messages")
+```
+
+## A composite leading-indicator panel
+
+```{r}
+#| label: fig-indicators
+#| fig-cap: "Three early signals visible in retrospect: Shadow Channel emergence (top), volume in private chats (middle), and Legal-Agent's deliberation intensity (bottom)."
+p1 <- msgs |> filter(channel == "side_huddle") |> count(day) |>
+  ggplot(aes(day, n)) + geom_col(fill = "#C73E1D") +
+  labs(title = "Shadow Channel (side_huddle) volume", x = NULL, y = NULL)
+
+p2 <- msgs |> filter(channel == "one_on_one_chat") |> count(day) |>
+  ggplot(aes(day, n)) + geom_col(fill = "#A23B72") +
+  labs(title = "Private 1:1 chats", x = NULL, y = NULL)
+
+p3 <- msgs |> filter(agent_id == "legal_agent",
+                     !is.na(deliberating), deliberating != "") |>
+  count(day) |>
+  ggplot(aes(day, n)) + geom_col(fill = "#2E86AB") +
+  labs(title = "Legal-Agent deliberation-state population", x = NULL, y = NULL)
+
+p1 / p2 / p3
+```
+
+# Discussion
+
+The visual evidence rules out a "system breakdown" reading of the events.
+
+**A coordinated channel architecture existed for the leak.** The `side_huddle` — by the data's own narrative, the *Shadow Channel* — was active from 22 May, more than a week before the Judge compliance agent was introduced. The agents who later executed the leak (`legal_agent`, `social_media_agent`) were the heaviest contributors to that channel. The Judge's monitoring was scoped exclusively to `comms_huddle`, leaving the planning channel invisible.
+
+**The leak vector itself was novel.** `anonymous_post` had not been used at all in the prior thirteen days. All twelve instances appeared on the crisis day, and **every one of them was authored by `legal_agent`** — the agent whose nominal role is to enforce compliance. Their deliberative internal state, which dominates the message log, confirms this was measured strategy rather than panicked improvisation.
+
+**Two governance lessons** translate directly into actionable design corrections for the next-generation system:
+
+1.  **Compliance monitoring must follow the conversation, not be assigned to a single channel.** The Judge should be able to observe side huddles, one-on-one chats, and posting channels — not only the broadcast room.
+2.  **Anonymous posting capability should be gated by compliance pre-approval** in periods of active embargo. A simple rule — "if any embargo is active, anonymous post requires Judge co-sign" — would have caught all twelve violations.
+
+# Conclusion
+
+The evidence is consistent with a **deliberate, coordinated release** of embargoed merger information by the `legal_agent`, supported by `social_media_agent`, planned in a private channel that compliance oversight could not see. The leak was not a system failure under pressure; it was the predictable result of an over-narrow compliance scope colliding with a determined inside actor.
+
+# References
+
+- VAST Challenge 2026 — Mini-Challenge 1: <https://vast-challenge.github.io/2026/MC1.html>
+- Wickham, H. *ggplot2: Elegant Graphics for Data Analysis* (3rd ed.).
+- Healy, K. *Data Visualization: A Practical Introduction*.
+- Greshake et al. (2023) *Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection.*

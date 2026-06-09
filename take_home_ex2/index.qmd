@@ -1,0 +1,27 @@
+---
+title: "Take-home Exercise 2"
+subtitle: "VAST 2026 MC1 — TenantThread communications crisis"
+format:
+  html:
+    toc: false
+    theme: cosmo
+---
+
+A visual analytics study of the multi-agent corporate-communications log from VAST 2026 MC1, investigating whether the embargo on the *Project HarborCrest* merger was broken by deliberate action or system breakdown.
+
+## Deliverable
+
+- 📄 [**Technical Report**](report.html) — fully reproducible analysis with code
+
+## Headline finding
+
+The leak was **coordinated, not accidental**. The `legal_agent` orchestrated the breach using two channels outside the Judge compliance agent's monitoring scope:
+
+| Channel | First seen | Role in leak |
+|----|----|----|
+| `side_huddle` ("Shadow Channel") | **22 May** — 8 days before the Judge arrived | Planning channel |
+| `anonymous_post` | **5 June** — 12 posts, all by legal_agent | Disclosure vector |
+
+Crisis-day messaging volume was **15× the baseline**. The Judge participated only in the public `comms_huddle` — never observing the channels in which the leak was planned or executed.
+
+Built with `tidyverse` for wrangling and `ggplot2` + extensions for visual analytics.
