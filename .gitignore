@@ -13,4 +13,6 @@
 take_home_ex1/data/*.csv
 take_home_ex1/_freeze/
 **/*_cache/
-**/*_files/
+# NOTE: do NOT ignore _site/**/*_files — those hold the rendered plot/map images
+# the static site needs. Ignore only the source-root render intermediates.
+/*_files/
