@@ -10,18 +10,56 @@ website:
 
       - text: "Hands-on Exercises"
         menu:
-          - text: "Hands-on Exercise 3a: Programming Interactive Data Visualisation with R"
+          - text: "1a: A Layered Grammar of Graphics: ggplot2 methods"
+            href: hands_on_exercise_1a.qmd
+          - text: "2a: Beyond ggplot2 Fundamentals"
+            href: hands_on_exercise_2a.qmd
+          - text: "---"
+          - text: "3a: Programming Interactive Data Visualisation with R"
             href: hands_on_exercise_3a.qmd
-          - text: "Hands-on Exercise 3b: Programming Animated Statistical Graphics with R"
+          - text: "3b: Programming Animated Statistical Graphics with R"
             href: hands_on_exercise_3b.qmd
-          - text: "Hands-on Exercise 4a: Visualising Distribution"
+          - text: "---"
+          - text: "4a: Visualising Distribution"
             href: hands_on_exercise_4a.qmd
-          - text: "Hands-on Exercise 4b: Visual Statistical Analysis"
+          - text: "4b: Visual Statistical Analysis"
             href: hands_on_exercise_4b.qmd
-          - text: "Hands-on Exercise 4c: Visualising Uncertainty"
+          - text: "4c: Visualising Uncertainty"
             href: hands_on_exercise_4c.qmd
-          - text: "Hands-on Exercise 4d: Funnel Plots for Fair Comparisons"
+          - text: "4d: Funnel Plots for Fair Comparisons"
             href: hands_on_exercise_4d.qmd
+          - text: "---"
+          - text: "5a: Visual Correlation Analysis"
+            href: hands_on_exercise_5a.qmd
+          - text: "5b: Building Ternary Plot with R"
+            href: hands_on_exercise_5b.qmd
+          - text: "5c: Heatmap for Visualising Multivariate Data"
+            href: hands_on_exercise_5c.qmd
+          - text: "5d: Parallel Coordinates Plot"
+            href: hands_on_exercise_5d.qmd
+          - text: "5e: Treemap Visualisation with R"
+            href: hands_on_exercise_5e.qmd
+          - text: "---"
+          - text: "6a: Web-enabled Visual Analytics with Shiny"
+            href: hands_on_exercise_6a.qmd
+          - text: "---"
+          - text: "7a: Visualising & Analysing Network Data"
+            href: hands_on_exercise_7a.qmd
+          - text: "7b: Visualising & Analysing Text Data"
+            href: hands_on_exercise_7b.qmd
+          - text: "---"
+          - text: "8a: Visualising & Analysing Time-oriented Data"
+            href: hands_on_exercise_8a.qmd
+          - text: "---"
+          - text: "9a: Choropleth Mapping with R"
+            href: hands_on_exercise_9a.qmd
+          - text: "9b: Visualising Geospatial Point Data"
+            href: hands_on_exercise_9b.qmd
+          - text: "9c: Analytical Mapping"
+            href: hands_on_exercise_9c.qmd
+          - text: "---"
+          - text: "10a: Information Dashboard Design"
+            href: hands_on_exercise_10a.qmd
 
       - text: "Take-home Exercises"
         menu:
@@ -36,6 +74,19 @@ website:
           - text: "  ↳ Technical Report"
             href: take_home_ex2/report.qmd
 
+      - text: "Shiny App"
+        menu:
+          - text: "Hands-on 6a: Exam Scores Explorer"
+            href: "https://jedsjed.shinyapps.io/isss608-hoe6a/"
+            target: _blank
+          - text: "Pupils Exam Result Dashboard (Shiny_demo)"
+            href: "https://jedsjed.shinyapps.io/Shiny_demo/"
+            target: _blank
+
+      - text: "Group Project"
+        href: "https://isss608-2526apr-g1.vercel.app"
+        target: _blank
+
       - href: about.qmd
         text: About
 
@@ -46,5 +97,8 @@ format:
       - brand
     css: styles.css
     toc: true
+
+execute:
+  freeze: auto
 
 editor: visual

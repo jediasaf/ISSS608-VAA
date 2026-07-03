@@ -1,0 +1,184 @@
+---
+title: "Hands-on Exercise 7a"
+subtitle: "Modelling, Visualising and Analysing Network Data with R"
+author: "Jedidiah Asaf T"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+---
+
+## Overview
+
+This hands-on exercise recreates the key techniques from Chapter 27 of *R for Visual Analytics*. Using the GAStech email corpus, it models the organisation as a **graph** and visualises it with `tidygraph` + `ggraph` (static) and `visNetwork` (interactive), including centrality-based node sizing.
+
+## Setup
+
+```{r}
+#| message: false
+#| warning: false
+
+if (!require(pacman)) install.packages("pacman")
+
+pacman::p_load(
+  igraph, tidygraph, ggraph, visNetwork,
+  lubridate, graphlayouts, ggforce, tidyverse
+)
+
+GAStech_nodes <- read_csv("data/GAStech_email_node.csv")
+GAStech_edges <- read_csv("data/GAStech_email_edge-v2.csv")
+```
+
+## Data Wrangling
+
+The send date is parsed and the weekday derived. Edges are then aggregated to weighted, work-related links between different people.
+
+```{r}
+#| message: false
+#| warning: false
+
+GAStech_edges <- GAStech_edges %>%
+  mutate(SendDate = dmy(SentDate)) %>%
+  mutate(Weekday = wday(SendDate, label = TRUE, abbr = FALSE))
+
+GAStech_edges_aggregated <- GAStech_edges %>%
+  filter(MainSubject == "Work related") %>%
+  group_by(source, target, Weekday) %>%
+  summarise(Weight = n(), .groups = "drop") %>%
+  filter(source != target) %>%
+  filter(Weight > 1)
+```
+
+# 1. Building the Graph Object
+
+`tbl_graph()` combines the node and edge tables into a `tidygraph` object.
+
+```{r}
+GAStech_graph <- tbl_graph(
+  nodes = GAStech_nodes,
+  edges = GAStech_edges_aggregated,
+  directed = TRUE
+)
+
+GAStech_graph
+```
+
+# 2. Static Network with ggraph
+
+## 2.1 Basic Plot
+
+```{r}
+#| fig-width: 9
+#| fig-height: 7
+ggraph(GAStech_graph, layout = "nicely") +
+  geom_edge_link(aes(width = Weight), alpha = 0.2) +
+  scale_edge_width(range = c(0.1, 5)) +
+  geom_node_point(aes(colour = Department), size = 3) +
+  theme_graph()
+```
+
+## 2.2 Faceting by Weekday
+
+```{r}
+#| fig-width: 11
+#| fig-height: 7
+ggraph(GAStech_graph, layout = "nicely") +
+  geom_edge_link(aes(width = Weight), alpha = 0.2) +
+  scale_edge_width(range = c(0.1, 5)) +
+  geom_node_point(aes(colour = Department), size = 2) +
+  facet_edges(~ Weekday) +
+  theme_graph(foreground = "grey80", fg_text_colour = "white")
+```
+
+## 2.3 Sizing Nodes by Betweenness Centrality
+
+Betweenness centrality highlights the people who act as bridges in the communication network.
+
+```{r}
+#| fig-width: 9
+#| fig-height: 7
+GAStech_graph <- GAStech_graph %>%
+  mutate(betweenness_centrality = centrality_betweenness())
+
+ggraph(GAStech_graph, layout = "fr") +
+  geom_edge_link(aes(width = Weight), alpha = 0.2) +
+  scale_edge_width(range = c(0.1, 5)) +
+  geom_node_point(aes(colour = Department, size = betweenness_centrality)) +
+  theme_graph()
+```
+
+## 2.4 Detecting Communities
+
+`tidygraph` inherits `igraph`'s community-detection algorithms via its `group_*` functions. Here `group_edge_betweenness()` partitions the graph into communities, which are then mapped to node colour.
+
+```{r}
+#| fig-width: 9
+#| fig-height: 7
+#| message: false
+#| warning: false
+g <- GAStech_graph %>%
+  mutate(community = as.factor(
+    group_edge_betweenness(
+      weights = Weight,
+      directed = TRUE))) %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(width = Weight), alpha = 0.2) +
+  scale_edge_width(range = c(0.1, 5)) +
+  geom_node_point(aes(colour = community))
+
+g + theme_graph()
+```
+
+To make communities easier to read, `geom_mark_hull()` (from `ggforce`) draws a hull around each community found by `group_optimal()`, while nodes are still coloured by `Department` and sized by betweenness centrality.
+
+```{r}
+#| fig-width: 9
+#| fig-height: 7
+#| message: false
+#| warning: false
+g <- GAStech_graph %>%
+  activate(nodes) %>%
+  mutate(community = as.factor(
+    group_optimal(weights = Weight)),
+    betweenness_measure = centrality_betweenness()) %>%
+  ggraph(layout = "fr") +
+  geom_mark_hull(
+    aes(x, y,
+        group = community,
+        fill = community),
+    alpha = 0.2,
+    expand = unit(0.3, "cm"),
+    radius = unit(0.3, "cm")
+  ) +
+  geom_edge_link(aes(width = Weight), alpha = 0.2) +
+  scale_edge_width(range = c(0.1, 5)) +
+  geom_node_point(aes(fill = Department,
+                      size = betweenness_measure),
+                  color = "black",
+                  shape = 21)
+
+g + theme_graph()
+```
+
+# 3. Interactive Network with visNetwork
+
+`visNetwork` expects the columns `from` and `to`; the aggregated edges are renamed accordingly.
+
+```{r}
+GAStech_edges_vis <- GAStech_edges_aggregated %>%
+  rename(from = source, to = target)
+
+visNetwork(GAStech_nodes, GAStech_edges_vis) %>%
+  visIgraphLayout(layout = "layout_with_fr") %>%
+  visOptions(
+    highlightNearest = list(enabled = TRUE, degree = 1, hover = TRUE),
+    nodesIdSelection = TRUE
+  ) %>%
+  visLegend() %>%
+  visLayout(randomSeed = 123)
+```
+
+# Learning Reflection
+
+In this exercise, I learned that network data needs two tables - nodes and edges - and that most of the analytical work happens before plotting: parsing dates, filtering to meaningful (work-related) links, and aggregating them into weighted edges. `tidygraph` lets me treat the graph like a tidy data frame, so computing **betweenness centrality** and mapping it to node size is a single `mutate()`. `ggraph` produces publication-quality static layouts (and can facet by weekday), while `visNetwork` makes the same graph interactive for exploration.

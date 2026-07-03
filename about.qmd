@@ -2,8 +2,27 @@
 title: "About"
 ---
 
-About this site
+## About this site
 
-```{r}
-1 + 1
-```
+This website is my coursework portfolio for **ISSS608 Visual Analytics and Applications**, part of the Master of IT in Business programme at Singapore Management University.
+
+It brings together every **hands-on exercise** from the module. Each exercise recreates a chapter of Dr. Kam Tin Seong's book *R for Visual Analytics*, working through a specific visual analytics technique from first principles: the code, the resulting graphic, and a short reflection on what the method is good for.
+
+## About me
+
+I'm **Jedidiah Asaf T**, a student in the programme. You can also find my [group project](https://isss608-2526apr-g1.vercel.app){target="_blank"} and my [Shiny applications](https://jedsjed.shinyapps.io/isss608-hoe6a/){target="_blank"} linked from the navigation bar above.
+
+## Tools
+
+Everything here is built in **R** with **Quarto**. The main packages across the exercises include:
+
+- **ggplot2** and the **tidyverse** for the grammar of graphics and data wrangling
+- **ggiraph**, **plotly** and **crosstalk** for interactivity
+- **ggstatsplot**, **ggdist** and **FunnelPlotR** for statistical and uncertainty visualisation
+- **tidygraph**, **ggraph** and **tidytext** for network and text analysis
+- **sf** and **tmap** for geospatial mapping
+- **shiny** and **bslib** for web-enabled applications
+
+## Source
+
+The full source, including all datasets, is available on [GitHub](https://github.com/jediasaf/ISSS608-VAA){target="_blank"}.

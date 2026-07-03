@@ -1,0 +1,213 @@
+---
+title: "Hands-on Exercise 1a"
+subtitle: "A Layered Grammar of Graphics: ggplot2 methods"
+author: "Jedidiah Asaf T"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+---
+
+## Overview
+
+This hands-on exercise recreates the key techniques from Chapter 1 of *R for Visual Analytics*. The focus is on the **Layered Grammar of Graphics** - how `ggplot2` builds a plot from independent building blocks: data, aesthetic mappings, geometric objects, statistics, facets, coordinates, and themes.
+
+## Setup
+
+```{r}
+#| message: false
+#| warning: false
+
+if (!require(pacman)) install.packages("pacman")
+
+pacman::p_load(tidyverse)
+
+exam_data <- read_csv("Exam_data.csv")
+```
+
+## Data Preview
+
+```{r}
+DT::datatable(
+  exam_data,
+  class = "compact",
+  options = list(
+    pageLength = 10,
+    scrollX = TRUE
+  )
+)
+```
+
+# 1. Essential Grammatical Elements: Data and Aesthetics
+
+## 1.1 The `data` and `aes()` Layers
+
+A plot begins with a call to `ggplot()`, which initialises a coordinate system using the supplied data and aesthetic mappings. On its own it produces a blank canvas.
+
+```{r}
+ggplot(data = exam_data, aes(x = MATHS))
+```
+
+# 2. Geometric Objects
+
+## 2.1 Bar Chart with `geom_bar()`
+
+```{r}
+ggplot(exam_data, aes(x = RACE)) +
+  geom_bar()
+```
+
+## 2.2 Dot Plot with `geom_dotplot()`
+
+`scale_y_continuous()` is used to turn off the misleading y-axis.
+
+```{r}
+ggplot(exam_data, aes(x = MATHS)) +
+  geom_dotplot(binwidth = 2.5, dotsize = 0.5) +
+  scale_y_continuous(NULL, breaks = NULL)
+```
+
+## 2.3 Histogram with `geom_histogram()`
+
+```{r}
+ggplot(exam_data, aes(x = MATHS)) +
+  geom_histogram(bins = 20, color = "black", fill = "light blue")
+```
+
+## 2.4 Histogram Coloured by a Sub-group
+
+```{r}
+ggplot(exam_data, aes(x = MATHS, fill = GENDER)) +
+  geom_histogram(bins = 20, color = "grey30")
+```
+
+## 2.5 Kernel Density Estimate with `geom_density()`
+
+```{r}
+ggplot(exam_data, aes(x = MATHS, colour = GENDER)) +
+  geom_density()
+```
+
+## 2.6 Boxplot and Notched Boxplot with `geom_boxplot()`
+
+```{r}
+ggplot(exam_data, aes(y = MATHS, x = GENDER)) +
+  geom_boxplot(notch = TRUE)
+```
+
+## 2.7 Violin Plot with `geom_violin()`
+
+```{r}
+ggplot(exam_data, aes(y = MATHS, x = GENDER)) +
+  geom_violin()
+```
+
+## 2.8 Scatterplot with `geom_point()`
+
+```{r}
+ggplot(exam_data, aes(x = MATHS, y = ENGLISH)) +
+  geom_point()
+```
+
+## 2.9 Combining Geometric Objects
+
+Boxplot and scatter (jittered points) can be layered in a single plot.
+
+```{r}
+ggplot(exam_data, aes(y = MATHS, x = GENDER)) +
+  geom_boxplot() +
+  geom_point(position = "jitter", size = 0.5)
+```
+
+# 3. Statistics
+
+## 3.1 Adding a Mean with `stat_summary()`
+
+```{r}
+ggplot(exam_data, aes(y = MATHS, x = GENDER)) +
+  geom_boxplot() +
+  stat_summary(
+    geom = "point",
+    fun = "mean",
+    colour = "red",
+    size = 4
+  )
+```
+
+## 3.2 Adding a Best-fit Curve with `geom_smooth()`
+
+```{r}
+ggplot(exam_data, aes(x = MATHS, y = ENGLISH)) +
+  geom_point() +
+  geom_smooth(method = lm, linewidth = 0.5)
+```
+
+# 4. Facets
+
+## 4.1 `facet_wrap()`
+
+```{r}
+ggplot(exam_data, aes(x = MATHS)) +
+  geom_histogram(bins = 20) +
+  facet_wrap(~ CLASS)
+```
+
+## 4.2 `facet_grid()`
+
+```{r}
+ggplot(exam_data, aes(x = MATHS)) +
+  geom_histogram(bins = 20) +
+  facet_grid(GENDER ~ CLASS)
+```
+
+# 5. Coordinates
+
+## 5.1 Flipping Axes with `coord_flip()`
+
+```{r}
+ggplot(exam_data, aes(x = RACE)) +
+  geom_bar() +
+  coord_flip()
+```
+
+## 5.2 Fixing the Range with `coord_cartesian()`
+
+```{r}
+ggplot(exam_data, aes(x = MATHS, y = ENGLISH)) +
+  geom_point() +
+  geom_smooth(method = lm, linewidth = 0.5) +
+  coord_cartesian(xlim = c(0, 100), ylim = c(0, 100))
+```
+
+# 6. Themes
+
+## 6.1 Comparing Built-in Themes
+
+```{r}
+ggplot(exam_data, aes(x = RACE)) +
+  geom_bar() +
+  coord_flip() +
+  theme_gray() +
+  labs(title = "theme_gray()")
+```
+
+```{r}
+ggplot(exam_data, aes(x = RACE)) +
+  geom_bar() +
+  coord_flip() +
+  theme_classic() +
+  labs(title = "theme_classic()")
+```
+
+```{r}
+ggplot(exam_data, aes(x = RACE)) +
+  geom_bar() +
+  coord_flip() +
+  theme_minimal() +
+  labs(title = "theme_minimal()")
+```
+
+# Learning Reflection
+
+In this exercise, I learned that the Layered Grammar of Graphics treats a chart as a set of independent building blocks - data, aesthetic mappings, geometric objects, statistics, facets, coordinates, and themes - that stack together with the `+` operator. Because each layer is independent, I can start from the same `ggplot()` call and swap the `geom`, add a `stat`, split with a `facet`, or restyle with a `theme` without rebuilding the plot from scratch. This modular thinking is the foundation for every later exercise.

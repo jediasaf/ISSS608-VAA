@@ -1,0 +1,187 @@
+---
+title: "Hands-on Exercise 7b"
+subtitle: "Visualising and Analysing Text Data with R: tidytext methods"
+author: "Jedidiah Asaf T"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+---
+
+## Overview
+
+This hands-on exercise recreates the key techniques from Chapter 29 of *R for Visual Analytics*. Using a subset of the 20-Newsgroups corpus, it applies **tidytext** methods to tokenise text, build word clouds, compute **tf-idf** to find each group's distinctive words, and draw a **word co-occurrence network**.
+
+## Setup
+
+```{r}
+#| message: false
+#| warning: false
+
+if (!require(pacman)) install.packages("pacman")
+
+pacman::p_load(
+  tidytext, widyr, wordcloud, ggwordcloud,
+  igraph, ggraph, tidygraph, tidyverse
+)
+
+news20 <- read_rds("data/rds/news20.rds")
+```
+
+## Data Preview
+
+```{r}
+DT::datatable(
+  head(news20, 100),
+  class = "compact",
+  options = list(pageLength = 10, scrollX = TRUE)
+)
+```
+
+# 1. Tokenisation and Cleaning
+
+Each line is split into words, stop-words and non-alphabetic tokens are removed.
+
+```{r}
+#| message: false
+#| warning: false
+
+usenet_words <- news20 %>%
+  unnest_tokens(word, text) %>%
+  filter(str_detect(word, "^[a-z']+$")) %>%
+  anti_join(stop_words, by = "word")
+```
+
+```{r}
+word_counts <- usenet_words %>%
+  count(word, sort = TRUE)
+
+DT::datatable(
+  head(word_counts, 100),
+  class = "compact",
+  options = list(pageLength = 10)
+)
+```
+
+# 2. Word Cloud
+
+## 2.1 Word Cloud with ggwordcloud
+
+```{r}
+#| fig-width: 8
+#| fig-height: 6
+#| warning: false
+
+word_counts %>%
+  slice_max(n, n = 100) %>%
+  ggplot(aes(label = word, size = n, colour = n)) +
+  geom_text_wordcloud_area() +
+  scale_size_area(max_size = 14) +
+  scale_colour_gradient(low = "#9ecae1", high = "#08306b") +
+  theme_minimal() +
+  labs(title = "Top 100 words across the newsgroups")
+```
+
+# 3. Distinctive Words with tf-idf
+
+`bind_tf_idf()` finds the words that are characteristic of each newsgroup rather than common everywhere.
+
+```{r}
+#| fig-width: 10
+#| fig-height: 8
+
+groups <- c("sci.space", "rec.autos", "talk.politics.guns", "comp.graphics")
+
+tf_idf <- usenet_words %>%
+  filter(newsgroup %in% groups) %>%
+  count(newsgroup, word) %>%
+  bind_tf_idf(word, newsgroup, n) %>%
+  group_by(newsgroup) %>%
+  slice_max(tf_idf, n = 12) %>%
+  ungroup()
+
+tf_idf %>%
+  mutate(word = reorder_within(word, tf_idf, newsgroup)) %>%
+  ggplot(aes(tf_idf, word, fill = newsgroup)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ newsgroup, scales = "free") +
+  scale_y_reordered() +
+  labs(x = "tf-idf", y = NULL, title = "Most distinctive words per newsgroup")
+```
+
+# 4. Bigram Analysis
+
+Instead of single words, the text is tokenised into **bigrams** (adjacent word pairs) with `unnest_tokens(..., token = "ngrams", n = 2)`.
+
+```{r}
+#| message: false
+#| warning: false
+
+bigrams <- news20 %>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2)
+```
+
+Each bigram is split into its two words, and pairs where either word is a stop-word or non-alphabetic are removed.
+
+```{r}
+bigram_counts <- bigrams %>%
+  filter(!is.na(bigram)) %>%
+  separate(bigram, c("word1", "word2"), sep = " ") %>%
+  filter(!word1 %in% stop_words$word,
+         !word2 %in% stop_words$word,
+         str_detect(word1, "^[a-z']+$"),
+         str_detect(word2, "^[a-z']+$")) %>%
+  count(word1, word2, sort = TRUE) %>%
+  unite(bigram, word1, word2, sep = " ")
+
+DT::datatable(
+  head(bigram_counts, 100),
+  class = "compact",
+  options = list(pageLength = 10)
+)
+```
+
+```{r}
+#| fig-width: 8
+#| fig-height: 6
+
+bigram_counts %>%
+  slice_max(n, n = 15) %>%
+  ggplot(aes(n, fct_reorder(bigram, n))) +
+  geom_col(fill = "#3182bd") +
+  labs(x = "count", y = NULL, title = "Top 15 bigrams across the newsgroups")
+```
+
+# 5. Word Co-occurrence Network
+
+Within one newsgroup, `widyr::pairwise_count()` finds words that frequently appear in the same message; the strongest pairs are drawn as a network.
+
+```{r}
+#| fig-width: 9
+#| fig-height: 7
+#| message: false
+#| warning: false
+
+word_cooc <- usenet_words %>%
+  filter(newsgroup == "sci.space") %>%
+  add_count(word) %>%
+  filter(n >= 50) %>%
+  pairwise_count(word, id, sort = TRUE)
+
+set.seed(1234)
+
+word_cooc %>%
+  filter(n >= 15) %>%
+  igraph::graph_from_data_frame(directed = FALSE) %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n), edge_colour = "#4575b4", show.legend = FALSE) +
+  geom_node_point(colour = "#08519c", size = 4) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  theme_graph() +
+  labs(title = "Word co-occurrence network - sci.space")
+```
+
+# Learning Reflection
+
+In this exercise, I learned that the tidytext "one-token-per-row" format makes text analysis feel like ordinary data wrangling. Once the text is tokenised and cleaned, a **word cloud** gives a quick gist, but **tf-idf** is far more informative because it surfaces the words that are *distinctive* to each newsgroup rather than merely frequent everywhere. Finally, `widyr` plus `ggraph` let me move from single words to **relationships between words**, revealing which terms co-occur within a topic.

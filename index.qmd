@@ -7,55 +7,176 @@ format:
 
 # ISSS608-VAA
 
-Hi, I’m **Jedidiah Asaf T**.\
-This website contains my hands-on exercises for **ISSS608 Visual Analytics and Applications**.
+Hi, I'm **Jedidiah Asaf T**.\
+This website collects my hands-on exercises for **ISSS608 Visual Analytics and Applications**. Each exercise recreates a chapter of *R for Visual Analytics* using R, ggplot2 and the tidyverse.
 
-## Hands-on Exercises
+## Lesson 1 to 2: Foundations
 
+:::: {.hx-grid}
 ::: card
-### Hands-on Exercise 3a
+### 1a
+A Layered Grammar of Graphics: ggplot2 methods
 
+[Open](hands_on_exercise_1a.qmd){.btn .btn-primary}
+:::
+::: card
+### 2a
+Beyond ggplot2 Fundamentals
+
+[Open](hands_on_exercise_2a.qmd){.btn .btn-primary}
+:::
+::::
+
+## Lesson 3: Interactivity
+
+:::: {.hx-grid}
+::: card
+### 3a
 Programming Interactive Data Visualisation with R
 
-[Open Exercise](hands_on_exercise_3a.qmd){.btn .btn-primary}
+[Open](hands_on_exercise_3a.qmd){.btn .btn-primary}
 :::
-
 ::: card
-### Hands-on Exercise 3b
-
+### 3b
 Programming Animated Statistical Graphics with R
 
-[Open Exercise](hands_on_exercise_3b.qmd){.btn .btn-primary}
+[Open](hands_on_exercise_3b.qmd){.btn .btn-primary}
 :::
+::::
 
+## Lesson 4: Fundamentals
+
+:::: {.hx-grid}
 ::: card
-### Hands-on Exercise 4a
-
+### 4a
 Visualising Distribution
 
-[Open Exercise](hands_on_exercise_4a.qmd){.btn .btn-primary}
+[Open](hands_on_exercise_4a.qmd){.btn .btn-primary}
 :::
-
 ::: card
-### Hands-on Exercise 4b
-
+### 4b
 Visual Statistical Analysis
 
-[Open Exercise](hands_on_exercise_4b.qmd){.btn .btn-primary}
+[Open](hands_on_exercise_4b.qmd){.btn .btn-primary}
 :::
-
 ::: card
-### Hands-on Exercise 4c
-
+### 4c
 Visualising Uncertainty
 
-[Open Exercise](hands_on_exercise_4c.qmd){.btn .btn-primary}
+[Open](hands_on_exercise_4c.qmd){.btn .btn-primary}
 :::
-
 ::: card
-### Hands-on Exercise 4d
-
+### 4d
 Funnel Plots for Fair Comparisons
 
-[Open Exercise](hands_on_exercise_4d.qmd){.btn .btn-primary}
+[Open](hands_on_exercise_4d.qmd){.btn .btn-primary}
 :::
+::::
+
+## Lesson 5: Multivariate Analysis
+
+:::: {.hx-grid}
+::: card
+### 5a
+Visual Correlation Analysis
+
+[Open](hands_on_exercise_5a.qmd){.btn .btn-primary}
+:::
+::: card
+### 5b
+Building Ternary Plot with R
+
+[Open](hands_on_exercise_5b.qmd){.btn .btn-primary}
+:::
+::: card
+### 5c
+Heatmap for Visualising Multivariate Data
+
+[Open](hands_on_exercise_5c.qmd){.btn .btn-primary}
+:::
+::: card
+### 5d
+Parallel Coordinates Plot
+
+[Open](hands_on_exercise_5d.qmd){.btn .btn-primary}
+:::
+::: card
+### 5e
+Treemap Visualisation with R
+
+[Open](hands_on_exercise_5e.qmd){.btn .btn-primary}
+:::
+::::
+
+## Lesson 6: Shiny
+
+:::: {.hx-grid}
+::: card
+### 6a
+Web-enabled Visual Analytics with Shiny
+
+[Open](hands_on_exercise_6a.qmd){.btn .btn-primary}
+:::
+::::
+
+## Lesson 7: Network and Text
+
+:::: {.hx-grid}
+::: card
+### 7a
+Visualising and Analysing Network Data
+
+[Open](hands_on_exercise_7a.qmd){.btn .btn-primary}
+:::
+::: card
+### 7b
+Visualising and Analysing Text Data
+
+[Open](hands_on_exercise_7b.qmd){.btn .btn-primary}
+:::
+::::
+
+## Lesson 8: Time
+
+:::: {.hx-grid}
+::: card
+### 8a
+Visualising and Analysing Time-oriented Data
+
+[Open](hands_on_exercise_8a.qmd){.btn .btn-primary}
+:::
+::::
+
+## Lesson 9: Geographic
+
+:::: {.hx-grid}
+::: card
+### 9a
+Choropleth Mapping with R
+
+[Open](hands_on_exercise_9a.qmd){.btn .btn-primary}
+:::
+::: card
+### 9b
+Visualising Geospatial Point Data
+
+[Open](hands_on_exercise_9b.qmd){.btn .btn-primary}
+:::
+::: card
+### 9c
+Analytical Mapping
+
+[Open](hands_on_exercise_9c.qmd){.btn .btn-primary}
+:::
+::::
+
+## Lesson 10: Dashboards
+
+:::: {.hx-grid}
+::: card
+### 10a
+Information Dashboard Design
+
+[Open](hands_on_exercise_10a.qmd){.btn .btn-primary}
+:::
+::::

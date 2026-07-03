@@ -1,0 +1,150 @@
+---
+title: "Hands-on Exercise 5e"
+subtitle: "Treemap Visualisation with R"
+author: "Jedidiah Asaf T"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+---
+
+## Overview
+
+This hands-on exercise recreates the key techniques from Chapter 16 of *R for Visual Analytics*. A **treemap** displays hierarchical, part-to-whole data as nested rectangles, where area encodes one measure and colour encodes another. Using 2018 Singapore private residential transactions, this exercise builds treemaps with the `treemap` and `treemapify` packages.
+
+## Setup
+
+```{r}
+#| message: false
+#| warning: false
+
+if (!require(pacman)) install.packages("pacman")
+
+pacman::p_load(treemap, treemapify, d3treeR, tidyverse)
+
+realis2018 <- read_csv("data/realis2018.csv")
+```
+
+## Data Preparation
+
+Transactions are grouped by planning region, planning area and project. For each project we sum the units sold and take the median unit price.
+
+```{r}
+#| message: false
+#| warning: false
+
+realis2018_grouped <- realis2018 %>%
+  group_by(`Planning Region`, `Planning Area`, `Project Name`) %>%
+  summarise(
+    `Total Unit Sold` = sum(`No. of Units`, na.rm = TRUE),
+    `Total Area` = sum(`Area (sqm)`, na.rm = TRUE),
+    `Median Unit Price ($ psm)` = median(`Unit Price ($ psm)`, na.rm = TRUE),
+    `Median Transacted Price` = median(`Transacted Price ($)`, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+```{r}
+DT::datatable(
+  realis2018_grouped,
+  class = "compact",
+  options = list(pageLength = 10, scrollX = TRUE)
+)
+```
+
+# 1. Treemap with the treemap Package
+
+## 1.1 Basic Treemap
+
+Rectangle **size** = total units sold; **colour** = median unit price. The hierarchy is region → planning area → project.
+
+```{r}
+#| fig-width: 9
+#| fig-height: 7
+treemap(
+  realis2018_grouped,
+  index = c("Planning Region", "Planning Area", "Project Name"),
+  vSize = "Total Unit Sold",
+  vColor = "Median Unit Price ($ psm)",
+  type = "value",
+  title = "Private Residential Property Sold, 2018",
+  title.legend = "Median Unit Price (S$ psm)"
+)
+```
+
+## 1.2 Selecting a Single Region
+
+Focusing on the Central Region reduces clutter and makes the individual projects legible.
+
+```{r}
+#| fig-width: 9
+#| fig-height: 7
+realis_central <- realis2018_grouped %>%
+  filter(`Planning Region` == "Central Region")
+
+treemap(
+  realis_central,
+  index = c("Planning Area", "Project Name"),
+  vSize = "Total Unit Sold",
+  vColor = "Median Unit Price ($ psm)",
+  type = "value",
+  title = "Central Region Private Residential Property Sold, 2018",
+  title.legend = "Median Unit Price (S$ psm)"
+)
+```
+
+# 2. Treemap with treemapify (ggplot2)
+
+`treemapify` provides `geom_treemap`, letting the treemap live inside the familiar ggplot2 grammar.
+
+```{r}
+#| fig-width: 9
+#| fig-height: 6
+realis_area <- realis2018_grouped %>%
+  group_by(`Planning Region`, `Planning Area`) %>%
+  summarise(
+    `Total Unit Sold` = sum(`Total Unit Sold`, na.rm = TRUE),
+    `Median Unit Price ($ psm)` = median(`Median Unit Price ($ psm)`, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(
+  realis_area,
+  aes(
+    area = `Total Unit Sold`,
+    fill = `Median Unit Price ($ psm)`,
+    label = `Planning Area`,
+    subgroup = `Planning Region`
+  )
+) +
+  geom_treemap() +
+  geom_treemap_subgroup_border(colour = "white") +
+  geom_treemap_text(colour = "white", place = "centre", grow = FALSE, reflow = TRUE) +
+  scale_fill_gradient(low = "#deebf7", high = "#08519c") +
+  labs(title = "Units Sold by Planning Area, 2018")
+```
+
+# 3. Interactive Treemap with d3treeR
+
+`d3treeR::d3tree()` turns a `treemap` object into an interactive, drill-down visualisation - click a rectangle to zoom into its children. We first build a `treemap` object and save it to `tm`, then pass it to `d3tree()`.
+
+```{r}
+#| fig-width: 9
+#| fig-height: 7
+tm <- treemap(
+  realis2018_grouped,
+  index = c("Planning Region", "Planning Area"),
+  vSize = "Total Unit Sold",
+  vColor = "Median Unit Price ($ psm)",
+  type = "value",
+  title = "Private Residential Property Sold, 2018",
+  title.legend = "Median Unit Price (S$ psm)"
+)
+
+d3tree(tm, rootname = "Singapore")
+```
+
+# Learning Reflection
+
+In this exercise, I learned that a treemap is well suited to hierarchical, part-to-whole data because it uses both **area** and **colour** to carry two measures at once - here, units sold and median price. As with the other multivariate exercises, most of the work is in the data preparation: grouping to the right level of the hierarchy before plotting. The `treemap` package gives a fast, information-dense result, while `treemapify` integrates with ggplot2 so I can theme it and combine it with the rest of my visual grammar.

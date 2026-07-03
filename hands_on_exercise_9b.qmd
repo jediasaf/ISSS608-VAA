@@ -1,0 +1,89 @@
+---
+title: "Hands-on Exercise 9b"
+subtitle: "Visualising Geospatial Point Data"
+author: "Jedidiah Asaf T"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+---
+
+## Overview
+
+This hands-on exercise recreates the key techniques from Chapter 22 of *R for Visual Analytics*. It turns an **aspatial** table of Singapore Pools outlets - with X/Y coordinates in the SVY21 projected system - into a geospatial point layer, then draws proportional-symbol maps with `tmap`.
+
+> **Note:** `sf` and `tmap` depend on the system libraries GDAL, GEOS and PROJ.
+
+## Setup
+
+```{r}
+#| message: false
+#| warning: false
+
+if (!require(pacman)) install.packages("pacman")
+
+pacman::p_load(sf, tmap, tidyverse)
+
+sgpools <- read_csv("data/aspatial/SGPools_svy21.csv")
+```
+
+## Creating an sf Point Layer
+
+`st_as_sf()` converts the XCOORD/YCOORD columns into geometry. EPSG **3414** is Singapore's SVY21 projected coordinate system.
+
+```{r}
+sgpools_sf <- st_as_sf(
+  sgpools,
+  coords = c("XCOORD", "YCOORD"),
+  crs = 3414
+)
+
+sgpools_sf
+```
+
+# 1. Interactive Proportional Symbol Map
+
+Bubble size encodes total winnings; colour encodes outlet type. `view` mode renders an interactive leaflet map.
+
+```{r}
+#| message: false
+#| warning: false
+tmap_mode("view")
+
+tm_shape(sgpools_sf) +
+  tm_bubbles(
+    fill = "OUTLET TYPE",
+    size = "Gp1Gp2 Winnings",
+    col = "black",
+    lwd = 1
+  )
+```
+
+# 2. Faceted Maps by Outlet Type
+
+Small multiples make it easy to compare the spatial spread of the two outlet types.
+
+```{r}
+#| fig-width: 10
+#| fig-height: 6
+tmap_mode("plot")
+
+tm_shape(sgpools_sf) +
+  tm_bubbles(
+    fill = "OUTLET TYPE",
+    size = "Gp1Gp2 Winnings",
+    col = "black",
+    lwd = 1
+  ) +
+  tm_facets(by = "OUTLET TYPE", nrow = 1, sync = TRUE)
+```
+
+```{r}
+#| echo: false
+tmap_mode("plot")
+```
+
+# Learning Reflection
+
+In this exercise, I learned how to promote an ordinary table into a mappable point layer: the key step is `st_as_sf()` with the correct coordinate columns and the correct **CRS** (SVY21 / EPSG:3414 here). Getting the CRS wrong would place every outlet in the wrong location. Once the layer exists, `tmap` makes proportional-symbol mapping straightforward, and switching to `view` mode turns the same code into an interactive leaflet map - while `tm_facets()` lets me compare outlet types as small multiples.

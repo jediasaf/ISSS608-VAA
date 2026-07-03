@@ -1,0 +1,179 @@
+---
+title: "Hands-on Exercise 5a"
+subtitle: "Visual Correlation Analysis"
+author: "Jedidiah Asaf T"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+---
+
+## Overview
+
+This hands-on exercise recreates the key techniques from Chapter 6 of *R for Visual Analytics*. The focus is on building **correlation matrices and corrgrams** to reveal the pairwise relationships among the physicochemical properties of wine, using `corrplot` and `ggstatsplot`.
+
+## Setup
+
+```{r}
+#| message: false
+#| warning: false
+
+if (!require(pacman)) install.packages("pacman")
+
+pacman::p_load(
+  corrplot,
+  ggstatsplot,
+  tidyverse
+)
+
+wine <- read_csv("data/wine_quality.csv")
+```
+
+## Data Preview
+
+```{r}
+DT::datatable(
+  head(wine, 50),
+  class = "compact",
+  options = list(pageLength = 10, scrollX = TRUE)
+)
+```
+
+# 1. Building a Correlation Matrix with `pairs()`
+
+## 1.1 Basic Scatterplot Matrix
+
+```{r}
+pairs(wine[, 1:11])
+```
+
+## 1.2 Lower-corner Only
+
+Showing only the lower half removes the redundant mirror image.
+
+```{r}
+pairs(wine[, 2:12], upper.panel = NULL)
+```
+
+## 1.3 Showing the Correlation Coefficient
+
+A custom `panel.cor()` function prints the absolute correlation in the upper panel, sized by strength.
+
+```{r}
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...) {
+  usr <- par("usr")
+  on.exit(par(usr))
+  par(usr = c(0, 1, 0, 1))
+  r <- abs(cor(x, y, use = "complete.obs"))
+  txt <- format(c(r, 0.123456789), digits = digits)[1]
+  txt <- paste0(prefix, txt)
+  if (missing(cex.cor)) cex.cor <- 0.8 / strwidth(txt)
+  text(0.5, 0.5, txt, cex = cex.cor * (1 + r) / 2)
+}
+
+pairs(wine[, 2:12], upper.panel = panel.cor)
+```
+
+# 2. Corrgram with ggstatsplot
+
+## 2.1 `ggcorrmat()`
+
+`ggstatsplot::ggcorrmat()` draws the correlation coefficients and marks the statistically non-significant pairs with a cross.
+
+```{r}
+#| fig-width: 8
+#| fig-height: 7
+ggstatsplot::ggcorrmat(
+  data = wine,
+  cor.vars = 1:11
+)
+```
+
+## 2.2 Grouped Corrgram by Wine Type
+
+```{r}
+#| fig-width: 11
+#| fig-height: 6
+grouped_ggcorrmat(
+  data = wine,
+  cor.vars = 1:11,
+  grouping.var = type,
+  plotgrid.args = list(ncol = 2)
+)
+```
+
+# 3. Corrgram with corrplot
+
+## 3.1 Computing and Plotting the Correlation Matrix
+
+```{r}
+wine.cor <- cor(wine[, 1:11])
+corrplot(wine.cor)
+```
+
+## 3.2 Changing the Visual Element
+
+Using ellipses and showing only the lower half.
+
+```{r}
+corrplot(
+  wine.cor,
+  method = "ellipse",
+  type = "lower"
+)
+```
+
+## 3.3 Mixed Layout
+
+Ellipses in the lower half, coefficients in the upper half.
+
+```{r}
+corrplot.mixed(
+  wine.cor,
+  lower = "ellipse",
+  upper = "number",
+  tl.pos = "lt",
+  diag = "l",
+  tl.col = "black"
+)
+```
+
+## 3.4 Combining with a Significance Test
+
+Pairs whose correlation is not significant at the 0.05 level are left blank.
+
+```{r}
+wine.sig <- cor.mtest(wine[, 1:11], conf.level = 0.95)
+
+corrplot(
+  wine.cor,
+  method = "number",
+  type = "lower",
+  diag = FALSE,
+  tl.col = "black",
+  tl.srt = 45,
+  p.mat = wine.sig$p,
+  sig.level = 0.05
+)
+```
+
+## 3.5 Reordering with Hierarchical Clustering
+
+`corrplot` can reorder the variables so that strongly correlated groups sit together, with cluster rectangles drawn on top.
+
+```{r}
+corrplot(
+  wine.cor,
+  method = "ellipse",
+  tl.pos = "lt",
+  tl.col = "black",
+  order = "hclust",
+  hclust.method = "ward.D",
+  addrect = 3
+)
+```
+
+# Learning Reflection
+
+In this exercise, I learned that a correlation matrix is far easier to read as a **corrgram** than as a table of numbers. `pairs()` gives a quick raw look, but `ggstatsplot::ggcorrmat()` adds real value by flagging non-significant relationships, and `grouped_ggcorrmat()` lets me compare red and white wine side by side. `corrplot` is the most flexible: reordering by hierarchical clustering and drawing cluster rectangles turned a noisy 11×11 matrix into clear blocks of related chemical properties.

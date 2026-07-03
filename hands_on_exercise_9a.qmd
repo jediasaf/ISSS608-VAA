@@ -1,0 +1,158 @@
+---
+title: "Hands-on Exercise 9a"
+subtitle: "Choropleth Mapping with R"
+author: "Jedidiah Asaf T"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+---
+
+## Overview
+
+This hands-on exercise recreates the key techniques from Chapter 21 of *R for Visual Analytics*. A **choropleth map** shades geographic areas in proportion to a statistical value. Using Singapore's Master Plan 2014 subzone boundaries and 2020 population, this exercise builds choropleth maps of the age **dependency ratio** with the `sf` and `tmap` packages.
+
+> **Note:** `sf` and `tmap` depend on the system libraries GDAL, GEOS and PROJ. If a map fails to render, install those libraries first (e.g. `brew install gdal` on macOS).
+
+## Setup
+
+```{r}
+#| message: false
+#| warning: false
+
+if (!require(pacman)) install.packages("pacman")
+
+pacman::p_load(sf, tmap, tidyverse)
+```
+
+## Importing the Data
+
+```{r}
+#| message: false
+#| warning: false
+#| results: hide
+
+mpsz <- st_read(dsn = "data/geospatial", layer = "MP14_SUBZONE_WEB_PL")
+
+popdata <- read_csv("data/aspatial/respop2020.csv")
+```
+
+## Data Preparation
+
+The 2020 population is summarised per subzone and grouped into three age bands - **young** (0-24), **economically active** (25-64) and **aged** (65+) - then the dependency ratio is computed.
+
+```{r}
+#| message: false
+#| warning: false
+
+young_ag  <- c("0_to_4", "5_to_9", "10_to_14", "15_to_19", "20_to_24")
+active_ag <- c("25_to_29", "30_to_34", "35_to_39", "40_to_44",
+               "45_to_49", "50_to_54", "55_to_59", "60_to_64")
+aged_ag   <- c("65_to_69", "70_to_74", "75_to_79", "80_to_84",
+               "85_to_89", "90_and_over")
+
+popdata2020 <- popdata %>%
+  filter(Time == 2020) %>%
+  mutate(band = case_when(
+    AG %in% young_ag  ~ "YOUNG",
+    AG %in% active_ag ~ "ECONOMY ACTIVE",
+    AG %in% aged_ag   ~ "AGED"
+  )) %>%
+  group_by(PA, SZ, band) %>%
+  summarise(POP = sum(Pop), .groups = "drop") %>%
+  pivot_wider(names_from = band, values_from = POP, values_fill = 0) %>%
+  mutate(
+    TOTAL = YOUNG + `ECONOMY ACTIVE` + AGED,
+    DEPENDENCY = (YOUNG + AGED) / `ECONOMY ACTIVE`
+  ) %>%
+  mutate(across(c(PA, SZ), toupper)) %>%
+  filter(`ECONOMY ACTIVE` > 0)
+```
+
+The attribute table is joined onto the subzone geometry using the subzone name.
+
+```{r}
+mpsz_pop2020 <- left_join(
+  mpsz, popdata2020,
+  by = c("SUBZONE_N" = "SZ")
+)
+```
+
+# 1. Quick Choropleth with `qtm()`
+
+```{r}
+#| fig-width: 9
+#| fig-height: 6
+tmap_mode("plot")
+qtm(mpsz_pop2020, fill = "DEPENDENCY")
+```
+
+# 2. A Fully Customised Choropleth
+
+```{r}
+#| fig-width: 9
+#| fig-height: 6
+tm_shape(mpsz_pop2020) +
+  tm_polygons(
+    fill = "DEPENDENCY",
+    fill.scale = tm_scale_intervals(style = "quantile", values = "brewer.blues"),
+    fill.legend = tm_legend(title = "Dependency ratio"),
+    col = "grey40",
+    lwd = 0.4
+  ) +
+  tm_title("Age Dependency Ratio by Subzone, 2020") +
+  tm_compass(type = "8star", size = 2) +
+  tm_scalebar() +
+  tm_grid(col_alpha = 0.2) +
+  tm_layout(frame = TRUE)
+```
+
+# 3. Comparing Classification Methods
+
+Different data-classification methods can tell very different visual stories from the same numbers.
+
+```{r}
+#| fig-width: 11
+#| fig-height: 9
+cmap <- function(style, ttl) {
+  tm_shape(mpsz_pop2020) +
+    tm_polygons(
+      fill = "DEPENDENCY",
+      fill.scale = tm_scale_intervals(n = 6, style = style, values = "brewer.blues")
+    ) +
+    tm_title(ttl)
+}
+
+tmap_arrange(
+  cmap("equal", "Equal interval"),
+  cmap("quantile", "Quantile"),
+  cmap("jenks", "Natural breaks (jenks)"),
+  cmap("kmeans", "k-means"),
+  ncol = 2
+)
+```
+
+## 3.1 Custom Breaks
+
+Rather than an algorithm, the breaks can be set by hand from the data's own summary statistics.
+
+```{r}
+#| fig-width: 9
+#| fig-height: 6
+summary(mpsz_pop2020$DEPENDENCY)
+
+tm_shape(mpsz_pop2020) +
+  tm_polygons(
+    fill = "DEPENDENCY",
+    fill.scale = tm_scale_intervals(
+      breaks = c(0, 0.60, 0.70, 0.80, 0.90, 1.00),
+      values = "brewer.blues"
+    )
+  ) +
+  tm_title("Custom breaks")
+```
+
+# Learning Reflection
+
+In this exercise, I learned that a choropleth map is really two datasets joined: a **geometry** (the subzone boundaries in the shapefile) and an **attribute** (the population statistic), linked by a common key. Most of the effort is in the attribute preparation - aggregating age bands and computing the dependency ratio - before `tmap` can shade the polygons. I also learned that the **classification method** (`quantile` vs `equal` interval) strongly changes the story a choropleth tells, so it must be chosen deliberately rather than left at the default.

@@ -1,0 +1,107 @@
+---
+title: "Hands-on Exercise 5b"
+subtitle: "Building Ternary Plot with R"
+author: "Jedidiah Asaf T"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+---
+
+## Overview
+
+This hands-on exercise recreates the key techniques from Chapter 13 of *R for Visual Analytics*. A **ternary plot** shows the composition of three mutually exclusive parts that sum to a whole. Here it is used to display the age structure (young / economically active / old) of Singapore's planning subzones, using `ggtern` for the static plot and `plotly` for the interactive version.
+
+## Setup
+
+```{r}
+#| message: false
+#| warning: false
+
+if (!require(pacman)) install.packages("pacman")
+
+pacman::p_load(plotly, ggtern, tidyverse)
+
+pop_data <- read_csv("data/respopagsex2000to2018_tidy.csv")
+```
+
+## Data Preparation
+
+The tidy data is reshaped so each subzone becomes one row, then the age groups are aggregated into three classes: **YOUNG** (0-24), **ACTIVE** (25-64) and **OLD** (65+). Only the 2018 records with a positive population are kept.
+
+```{r}
+#| message: false
+#| warning: false
+
+agpop_mutated <- pop_data %>%
+  mutate(Year = as.character(Year)) %>%
+  spread(AG, Population) %>%
+  mutate(YOUNG = rowSums(.[4:8])) %>%
+  mutate(ACTIVE = rowSums(.[9:16])) %>%
+  mutate(OLD = rowSums(.[17:21])) %>%
+  mutate(TOTAL = rowSums(.[22:24])) %>%
+  filter(Year == 2018) %>%
+  filter(TOTAL > 0)
+```
+
+```{r}
+DT::datatable(
+  agpop_mutated %>% select(PA, SZ, YOUNG, ACTIVE, OLD, TOTAL),
+  class = "compact",
+  options = list(pageLength = 10, scrollX = TRUE)
+)
+```
+
+# 1. Static Ternary Plot with ggtern
+
+## 1.1 Basic Ternary Plot
+
+```{r}
+ggtern(data = agpop_mutated, aes(x = YOUNG, y = ACTIVE, z = OLD)) +
+  geom_point()
+```
+
+## 1.2 With the `theme_rgbw()` Theme
+
+```{r}
+ggtern(data = agpop_mutated, aes(x = YOUNG, y = ACTIVE, z = OLD)) +
+  geom_point() +
+  labs(title = "Population structure of Singapore subzones, 2018") +
+  theme_rgbw()
+```
+
+# 2. Interactive Ternary Plot with plotly
+
+```{r}
+# reusable axis-label formatter
+axis <- function(txt) {
+  list(
+    title = txt, tickformat = ".0%", tickfont = list(size = 10)
+  )
+}
+
+ternaryAxes <- list(
+  aaxis = axis("Young"),
+  baxis = axis("Active"),
+  caxis = axis("Old")
+)
+
+plot_ly(
+  agpop_mutated,
+  a = ~YOUNG,
+  b = ~ACTIVE,
+  c = ~OLD,
+  color = I("#1f77b4"),
+  type = "scatterternary",
+  text = ~paste0("Subzone: ", SZ)
+) %>%
+  layout(
+    title = "Population structure, 2018",
+    ternary = ternaryAxes
+  )
+```
+
+# Learning Reflection
+
+In this exercise, I learned that a ternary plot is the right tool when three parts must sum to a whole - here, the young / active / old split of each subzone. The hardest part was the data preparation: reshaping the tidy table with `spread()` and aggregating the five-year age bands into three groups before anything could be plotted. `ggtern` produces a clean static composition plot, while `plotly`'s `scatterternary` type adds hover tooltips so I can identify exactly which subzone each point represents.

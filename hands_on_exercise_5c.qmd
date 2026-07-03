@@ -1,0 +1,113 @@
+---
+title: "Hands-on Exercise 5c"
+subtitle: "Heatmap for Visualising and Analysing Multivariate Data"
+author: "Jedidiah Asaf T"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+---
+
+## Overview
+
+This hands-on exercise recreates the key techniques from Chapter 14 of *R for Visual Analytics*. A **heatmap** encodes each value as a colour, letting us read a whole multivariate table at a glance. Using the 2018 World Happiness data, this exercise builds both a static clustered heatmap and an interactive one with `heatmaply`.
+
+## Setup
+
+```{r}
+#| message: false
+#| warning: false
+
+if (!require(pacman)) install.packages("pacman")
+
+pacman::p_load(seriation, dendextend, heatmaply, tidyverse)
+
+wh <- read_csv("data/WHData-2018.csv")
+```
+
+## Data Preparation
+
+The country column is promoted to row names and the data frame is converted to a numeric matrix, which is the input every heatmap function expects.
+
+```{r}
+wh <- as.data.frame(wh)
+row.names(wh) <- wh$Country
+wh_matrix <- data.matrix(wh)
+```
+
+# 1. Static Heatmap with `heatmap()`
+
+## 1.1 Without Clustering
+
+```{r}
+#| fig-width: 8
+#| fig-height: 9
+heatmap(
+  wh_matrix,
+  Rowv = NA,
+  Colv = NA
+)
+```
+
+## 1.2 With Clustering and Column Scaling
+
+Scaling each column to a common range prevents the large-magnitude variables from dominating the colour scale, and the dendrograms reorder rows and columns by similarity.
+
+```{r}
+#| fig-width: 8
+#| fig-height: 9
+heatmap(
+  wh_matrix,
+  scale = "column",
+  cexRow = 0.6,
+  cexCol = 0.8,
+  margins = c(10, 4)
+)
+```
+
+# 2. Interactive Heatmap with heatmaply
+
+## 2.1 Normalising the Variables
+
+The whisker and country/region columns are dropped, and `normalize()` rescales every remaining variable to 0-1 so they are comparable.
+
+```{r}
+#| fig-width: 8
+#| fig-height: 9
+heatmaply(
+  normalize(wh_matrix[, -c(1, 2, 4, 5)]),
+  Colv = NA,
+  seriate = "none",
+  colors = Blues,
+  k_row = 5,
+  margins = c(NA, 200, 60, NA),
+  fontsize_row = 4,
+  fontsize_col = 5,
+  main = "World Happiness 2018 (normalised)",
+  xlab = "Indicators",
+  ylab = "Countries"
+)
+```
+
+## 2.2 Reordering with Seriation
+
+Optimal-leaf-ordering ("OLO") rotates the dendrogram branches to minimise the distance between adjacent rows, revealing clearer blocks.
+
+```{r}
+#| fig-width: 8
+#| fig-height: 9
+heatmaply(
+  normalize(wh_matrix[, -c(1, 2, 4, 5)]),
+  seriate = "OLO",
+  k_row = 5,
+  margins = c(NA, 200, 60, NA),
+  fontsize_row = 4,
+  fontsize_col = 5,
+  main = "World Happiness 2018 (seriated)"
+)
+```
+
+# Learning Reflection
+
+In this exercise, I learned that a heatmap turns an overwhelming numeric table into a colour field the eye can scan instantly. The two essential pre-processing steps are getting the data into a numeric **matrix** with meaningful row names, and **normalising** the columns so no single indicator dominates the colour scale. The static `heatmap()` is quick, but `heatmaply` adds interactivity, dendrogram control, and seriation (`OLO`) that reorders the rows into clearly separated clusters of similarly-happy countries.

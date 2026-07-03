@@ -1,1 +1,150 @@
-/* css styles */
+/* =========================================================================
+   ISSS608 - Visual Analytics & Applications
+   Airbnb-inspired: friendly Montserrat type (sentence case, never all-caps),
+   blue brand colour, soft rounded cards, calm white space. Body stays
+   highly readable for long technical content.
+   ========================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --ab-ink:      #222222;   /* body text - Airbnb near-black, readable      */
+  --ab-ink-soft: #484848;   /* secondary text                              */
+  --ab-mute:     #767676;   /* captions, meta                              */
+  --ab-paper:    #ffffff;   /* white background                            */
+  --ab-surface:  #f7f7f7;   /* light grey panels                           */
+  --ab-line:     #ebebeb;   /* hairlines                                   */
+  --ab-blue:     #1e3a6b;   /* navy blue - headings, buttons, links        */
+  --ab-blue-ink: #14274e;   /* deeper navy - hover / pressed / subheads    */
+  --ab-blue-bg:  #eef1f7;   /* navy tint for subtle fills                  */
+  --ab-radius:   12px;
+  --ab-measure:  72ch;
+  --ab-ease:     cubic-bezier(0.22, 1, 0.36, 1);
+  --ab-font:     "Montserrat", -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ---- Base ------------------------------------------------------------- */
+body {
+  background-color: var(--ab-paper);
+  color: var(--ab-ink);
+  font-family: var(--ab-font);
+  font-size: 1.02rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+p, li { color: var(--ab-ink); }
+.text-muted, .quarto-title-meta, figcaption { color: var(--ab-mute) !important; }
+main p, main ul, main ol, main blockquote { max-width: var(--ab-measure); }
+main p { text-wrap: pretty; }
+
+/* ---- Typography: friendly Montserrat, sentence case, blue headings ---- */
+h1, h2, h3, h4, h5 {
+  font-family: var(--ab-font);
+  color: var(--ab-blue);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-transform: none;          /* never all-caps */
+  text-wrap: balance;
+}
+
+h1.title { font-weight: 800; font-size: clamp(2rem, 1.4rem + 2.4vw, 3rem); margin-bottom: 0.4rem; }
+.subtitle, p.subtitle { color: var(--ab-mute); font-weight: 500; font-size: 1.08rem; letter-spacing: 0; }
+
+h2 { font-size: 1.6rem; margin-top: 2.8rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--ab-line); }
+h3 { font-size: 1.25rem; margin-top: 2rem; color: var(--ab-blue-ink); }
+h4, h5 { font-size: 1.02rem; color: var(--ab-ink); }
+
+/* ---- Links ------------------------------------------------------------ */
+a { color: var(--ab-blue); text-decoration: none; transition: color 0.15s var(--ab-ease); }
+a:hover { color: var(--ab-blue-ink); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---- Navbar: white, sentence case, blue active underline -------------- */
+.navbar {
+  background-color: var(--ab-paper) !important;
+  border-bottom: 1px solid var(--ab-line);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  padding-top: 0.55rem; padding-bottom: 0.55rem;
+}
+.navbar .navbar-brand { font-weight: 800; letter-spacing: -0.01em; color: var(--ab-blue) !important; text-transform: none; }
+.navbar .nav-link {
+  color: var(--ab-ink) !important;
+  font-weight: 600;
+  font-size: 0.94rem;
+  text-transform: none;
+  padding: 0.4rem 0.75rem !important;
+  border-radius: 8px;
+  transition: background 0.15s var(--ab-ease), color 0.15s var(--ab-ease);
+}
+.navbar .nav-link:hover { color: var(--ab-blue-ink) !important; background: var(--ab-blue-bg); }
+.navbar .nav-link.active { color: var(--ab-blue) !important; background: var(--ab-blue-bg); }
+.dropdown-menu { border: 1px solid var(--ab-line); border-radius: var(--ab-radius); box-shadow: 0 12px 32px rgba(0,0,0,0.12); padding: 6px; }
+/* Long menus (Hands-on has 21 items) scroll instead of overflowing off-screen */
+.navbar .dropdown-menu { max-height: 78vh; overflow-y: auto; }
+.dropdown-item { border-radius: 8px; padding: 0.45rem 0.7rem; font-weight: 500; }
+.dropdown-item:hover { background: var(--ab-blue-bg); color: var(--ab-blue-ink); }
+.dropdown-divider { border-top-color: var(--ab-line); }
+
+/* ---- Buttons: rounded blue, sentence case ---------------------------- */
+.btn-primary, .btn-default, .btn-secondary {
+  background: var(--ab-blue); border-color: var(--ab-blue); color: #fff;
+  font-weight: 600; text-transform: none; letter-spacing: 0;
+  border-radius: 10px; padding: 0.5rem 1.2rem;
+  transition: transform 0.12s var(--ab-ease), background 0.15s var(--ab-ease);
+}
+.btn-primary:hover, .btn-default:hover, .btn-secondary:hover { background: var(--ab-blue-ink); border-color: var(--ab-blue-ink); color: #fff; }
+.btn:active { transform: scale(0.98); }
+
+/* ---- Cards (home page exercise tiles): soft shadow, rounded ---------- */
+.card {
+  border: none;
+  border-radius: var(--ab-radius);
+  background: var(--ab-paper);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.07);
+  padding: 1.3rem 1.4rem 1.4rem;
+  margin-bottom: 1.2rem;
+  transition: transform 0.2s var(--ab-ease), box-shadow 0.2s var(--ab-ease);
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,0,0,0.11); }
+.card h3, .card h3:first-child { margin-top: 0; color: var(--ab-blue); }
+
+/* Home page: responsive grid of compact exercise cards (2-4 per row) */
+.hx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 1rem; margin: 1.1rem 0 2rem; }
+.hx-grid .card { margin-bottom: 0; padding: 1.1rem 1.2rem 1.2rem; display: flex; flex-direction: column; }
+.hx-grid .card h3 { font-size: 1.35rem; margin: 0 0 0.3rem; }
+.hx-grid .card p { color: var(--ab-ink-soft); font-size: 0.95rem; line-height: 1.5; flex: 1 1 auto; margin: 0 0 0.95rem; }
+.hx-grid .card .btn { align-self: flex-start; padding: 0.4rem 1.1rem; }
+
+/* ---- Table of contents ------------------------------------------------ */
+#TOC .nav-link, nav[role="doc-toc"] .nav-link { color: var(--ab-mute); border-left: 2px solid transparent; padding: 0.15rem 0 0.15rem 0.7rem; font-weight: 500; }
+#TOC .nav-link:hover { color: var(--ab-blue); }
+#TOC .nav-link.active, nav[role="doc-toc"] .nav-link.active { color: var(--ab-blue) !important; font-weight: 600; border-left-color: var(--ab-blue); }
+
+/* ---- Code ------------------------------------------------------------- */
+div.sourceCode { border: 1px solid var(--ab-line); border-radius: var(--ab-radius); background: #fafafa; }
+pre code { font-size: 0.86rem; }
+code:not(.sourceCode) { background: var(--ab-blue-bg); color: var(--ab-blue-ink); padding: 0.1em 0.38em; border-radius: 4px; font-size: 0.88em; }
+details.code-fold > summary { color: var(--ab-blue); font-weight: 600; }
+details.code-fold > summary:hover { color: var(--ab-blue-ink); }
+
+/* ---- Tables ----------------------------------------------------------- */
+.table > thead, table.dataTable thead th {
+  color: var(--ab-ink) !important;
+  border-bottom: 2px solid var(--ab-line) !important;
+  font-weight: 700; text-transform: none;
+}
+table.dataTable tbody td { border-top-color: #f0f0f0; }
+table.dataTable tbody tr:hover td { background: var(--ab-surface); }
+.dataTables_wrapper { font-size: 0.9rem; }
+
+/* ---- Figures / callouts / iframe ------------------------------------- */
+.figure, figure, .quarto-figure { margin: 1.5rem 0 2rem; }
+img { max-width: 100%; height: auto; }
+.callout { border-radius: var(--ab-radius); }
+iframe { border-radius: var(--ab-radius); }
+
+/* ---- Motion & focus --------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+a:focus-visible, .nav-link:focus-visible, .btn:focus-visible { outline: 2px solid var(--ab-blue); outline-offset: 2px; }
